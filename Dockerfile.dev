@@ -1,0 +1,51 @@
+# Development Dockerfile for hot reload - OneTime Frontend
+FROM node:20-alpine
+
+# Install system dependencies and development tools
+RUN apk update && apk upgrade && \
+    apk add --no-cache \
+    libc6-compat \
+    dumb-init \
+    curl \
+    ca-certificates \
+    tzdata \
+    bash \
+    vim && \
+    rm -rf /var/cache/apk/*
+
+# Set timezone to KST for Korean development
+ENV TZ=Asia/Seoul
+ENV NODE_ENV=development
+ENV NEXT_TELEMETRY_DISABLED=1
+
+WORKDIR /app
+
+# Create app user for security (even in dev)
+RUN addgroup -g 1001 -S onetime && \
+    adduser -S onetime -u 1001 -G onetime
+
+# Copy dependency files
+COPY package*.json ./
+
+# Install all dependencies (including dev dependencies)
+RUN npm ci --silent && npm cache clean --force
+
+# Create development directories
+RUN mkdir -p /app/.next /app/public /app/coverage && \
+    chown -R onetime:onetime /app
+
+# Switch to development user
+USER onetime
+
+# Expose port
+EXPOSE 3000
+
+# Development health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+  CMD curl -f http://localhost:3000/api/health || exit 1
+
+# Use dumb-init to handle signals properly
+ENTRYPOINT ["dumb-init", "--"]
+
+# Development command with hot reload
+CMD ["npm", "run", "dev"]

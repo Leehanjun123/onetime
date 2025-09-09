@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="192" height="192" viewBox="0 0 192 192" xmlns="http://www.w3.org/2000/svg">
+  <rect width="192" height="192" rx="20" fill="#ea580c"/>
+  <text x="96" y="110" text-anchor="middle" font-size="60" fill="white">🔨</text>
+  <text x="96" y="150" text-anchor="middle" font-size="20" font-weight="bold" fill="white">일데이</text>
+</svg>

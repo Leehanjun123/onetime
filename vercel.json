@@ -1,0 +1,35 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "framework": "nextjs",
+  "env": {
+    "NEXT_PUBLIC_API_URL": "https://onetime-production.up.railway.app/api/v1",
+    "NEXT_PUBLIC_BACKEND_URL": "https://onetime-production.up.railway.app",
+    "NEXT_PUBLIC_SOCKET_URL": "https://onetime-production.up.railway.app"
+  },
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://onetime-production.up.railway.app/api/:path*"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        }
+      ]
+    }
+  ]
+}
