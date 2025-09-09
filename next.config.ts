@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Standalone output for Docker
+  output: 'standalone',
+  
   // Disable ESLint during builds
   eslint: {
     ignoreDuringBuilds: true,
