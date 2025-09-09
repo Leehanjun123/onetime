@@ -485,9 +485,11 @@ export default function Home() {
           </div>
 
           <div className="text-center mt-12">
-            <Button size="lg" variant="secondary">
-              모든 카테고리 보기 →
-            </Button>
+            <Link href="/jobs">
+              <Button size="lg" variant="secondary">
+                모든 카테고리 보기 →
+              </Button>
+            </Link>
           </div>
 
           {/* 네이티브 광고 */}
@@ -520,9 +522,11 @@ export default function Home() {
           </div>
 
           <div className="text-center mt-12">
-            <Button size="lg">
-              더 많은 일자리 보기 →
-            </Button>
+            <Link href="/jobs">
+              <Button size="lg">
+                더 많은 일자리 보기 →
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
@@ -577,12 +581,16 @@ export default function Home() {
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="xl" variant="secondary" className="bg-white text-gray-900 hover:bg-gray-100">
-              구직자 회원가입
-            </Button>
-            <Button size="xl" variant="ghost" className="text-white border-white/30 hover:bg-white/10">
-              기업 서비스 알아보기
-            </Button>
+            <Link href="/register">
+              <Button size="xl" variant="secondary" className="bg-white text-gray-900 hover:bg-gray-100">
+                구직자 회원가입
+              </Button>
+            </Link>
+            <Link href="/employer">
+              <Button size="xl" variant="ghost" className="text-white border-white/30 hover:bg-white/10">
+                기업 서비스 알아보기
+              </Button>
+            </Link>
           </div>
           
           <div className="mt-8 text-orange-200">
