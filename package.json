@@ -1,40 +1,19 @@
 {
-  "name": "frontend",
-  "version": "0.1.0",
-  "private": true,
+  "name": "onetime-backend",
+  "version": "1.0.0",
+  "description": "OneTime Backend API",
+  "main": "src/index.js",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
+    "start": "node src/index.js",
+    "dev": "node src/index.js",
+    "build": "echo 'No build needed'"
   },
   "dependencies": {
-    "@reduxjs/toolkit": "^2.8.2",
-    "@tosspayments/payment-sdk": "^1.9.1",
-    "@types/uuid": "^10.0.0",
-    "autoprefixer": "^10.4.21",
-    "axios": "^1.11.0",
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
-    "firebase": "^12.2.1",
-    "next": "15.5.2",
-    "postcss": "^8.5.6",
-    "react": "19.1.0",
-    "react-dom": "19.1.0",
-    "react-redux": "^9.2.0",
-    "socket.io-client": "^4.8.1",
-    "tailwind-merge": "^3.3.1",
-    "tailwindcss": "^3.4.17",
-    "uuid": "^12.0.0",
-    "web-vitals": "^4.2.4"
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1"
   },
-  "devDependencies": {
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "critters": "^0.0.23",
-    "eslint": "^9",
-    "eslint-config-next": "15.5.2",
-    "typescript": "^5"
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
