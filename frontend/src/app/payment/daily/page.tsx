@@ -76,7 +76,7 @@ export default function DailyPaymentPage() {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const response = await fetch('http://localhost:4000/api/v1/settlements', {
+      const response = await fetch('http://localhost:5000/api/v1/settlements', {
         headers: {
           'Authorization': `Bearer ${token}`
         }

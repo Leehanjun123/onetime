@@ -80,7 +80,7 @@ export default function ProfilePage() {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:4000/api/v1/profile', {
+      const response = await fetch('http://localhost:5000/api/v1/profile', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -139,7 +139,7 @@ export default function ProfilePage() {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:4000/api/v1/profile', {
+      const response = await fetch('http://localhost:5000/api/v1/profile', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

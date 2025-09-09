@@ -66,7 +66,7 @@ export default function PortfolioPage() {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:4000/api/v1/portfolio', {
+      const response = await fetch('http://localhost:5000/api/v1/portfolio', {
         headers: {
           'Authorization': `Bearer ${token}`
         }

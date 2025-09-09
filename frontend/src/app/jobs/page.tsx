@@ -123,7 +123,7 @@ export default function JobsPage() {
       setLoading(true);
       
       // 백엔드 API 호출
-      const response = await fetch('http://localhost:4000/api/v1/jobs');
+      const response = await fetch('http://localhost:5000/api/v1/jobs');
       const data = await response.json();
       
       if (data.success && data.data?.jobs) {

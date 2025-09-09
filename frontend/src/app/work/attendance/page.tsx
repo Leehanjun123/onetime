@@ -35,7 +35,7 @@ export default function AttendancePage() {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:4000/api/v1/work-session/history?period=${selectedPeriod}`, {
+      const response = await fetch(`http://localhost:5000/api/v1/work-session/history?period=${selectedPeriod}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }

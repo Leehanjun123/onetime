@@ -105,7 +105,7 @@ export default function MatchingRequestPage() {
         requirements: formData.requirements
       };
 
-      const response = await fetch('http://localhost:3000/api/v1/matching/request', {
+      const response = await fetch('http://localhost:5000/api/v1/matching/request', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

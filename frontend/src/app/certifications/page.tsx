@@ -51,7 +51,7 @@ export default function CertificationsPage() {
   const fetchCertifications = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:4000/api/v1/certifications', {
+      const response = await fetch('http://localhost:5000/api/v1/certifications', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -213,7 +213,7 @@ export default function CertificationsPage() {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:4000/api/v1/user-certifications', {
+      const response = await fetch('http://localhost:5000/api/v1/user-certifications', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -303,7 +303,7 @@ export default function CertificationsPage() {
   const handleStartCertification = async (certification: Certification) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:4000/api/v1/user-certifications', {
+      const response = await fetch('http://localhost:5000/api/v1/user-certifications', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

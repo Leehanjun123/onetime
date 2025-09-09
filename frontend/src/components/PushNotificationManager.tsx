@@ -137,7 +137,7 @@ export default function PushNotificationManager({ onPermissionChange }: PushNoti
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const response = await fetch('http://localhost:4000/api/v1/push/subscribe', {
+      const response = await fetch('http://localhost:5000/api/v1/push/subscribe', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -170,7 +170,7 @@ export default function PushNotificationManager({ onPermissionChange }: PushNoti
         // 백엔드에 구독 해제 알림
         const token = localStorage.getItem('token');
         if (token) {
-          await fetch('http://localhost:4000/api/v1/push/unsubscribe', {
+          await fetch('http://localhost:5000/api/v1/push/unsubscribe', {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${token}`
@@ -207,7 +207,7 @@ export default function PushNotificationManager({ onPermissionChange }: PushNoti
         return;
       }
 
-      const response = await fetch('http://localhost:4000/api/v1/test-notification', {
+      const response = await fetch('http://localhost:5000/api/v1/test-notification', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

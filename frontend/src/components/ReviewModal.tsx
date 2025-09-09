@@ -64,7 +64,7 @@ export default function ReviewModal({ isOpen, onClose, contractId, contractInfo,
         tags: selectedTags
       };
 
-      const response = await fetch('http://localhost:3000/api/v1/reviews', {
+      const response = await fetch('http://localhost:5000/api/v1/reviews', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

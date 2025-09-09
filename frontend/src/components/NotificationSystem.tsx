@@ -176,7 +176,7 @@ export default function NotificationSystem({ userId, maxNotifications = 5 }: Not
 
   const handleMatchResponse = async (matchId: string, response: 'accept' | 'reject') => {
     try {
-      const responseData = await fetch(`http://localhost:4000/api/v1/matching/${matchId}/respond`, {
+      const responseData = await fetch(`http://localhost:5000/api/v1/matching/${matchId}/respond`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

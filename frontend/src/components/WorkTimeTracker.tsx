@@ -122,7 +122,7 @@ export default function WorkTimeTracker() {
       setCurrentLocation(location);
 
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:4000/api/v1/work-session/checkin', {
+      const response = await fetch('http://localhost:5000/api/v1/work-session/checkin', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -166,7 +166,7 @@ export default function WorkTimeTracker() {
       const location = await getCurrentLocation();
       
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:4000/api/v1/work-session/checkout', {
+      const response = await fetch('http://localhost:5000/api/v1/work-session/checkout', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

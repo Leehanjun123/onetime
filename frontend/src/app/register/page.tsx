@@ -48,7 +48,7 @@ export default function RegisterPage() {
 
     try {
       // 백엔드 API 호출 로직
-      const response = await fetch('http://localhost:3000/api/v1/auth/register', {
+      const response = await fetch('http://localhost:5000/api/v1/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
