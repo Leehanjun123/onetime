@@ -70,7 +70,7 @@ export default function MyPage() {
   const fetchUserData = async () => {
     try {
       // 백엔드 API 호출 (추후 실제 API로 교체)
-      // const response = await fetch('http://localhost:5000/api/users/profile', {
+      // const response = await fetch('http://localhost:4000/api/users/profile', {
       //   headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       // });
       // const userData = await response.json();
@@ -170,7 +170,7 @@ export default function MyPage() {
   const handleUpdateProfile = async () => {
     try {
       // 백엔드 API 호출
-      // const response = await fetch('http://localhost:5000/api/users/profile', {
+      // const response = await fetch('http://localhost:4000/api/users/profile', {
       //   method: 'PUT',
       //   headers: {
       //     'Content-Type': 'application/json',

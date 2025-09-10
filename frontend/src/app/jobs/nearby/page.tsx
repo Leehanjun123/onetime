@@ -370,7 +370,7 @@ export default function NearbyJobsPage() {
       if (!token) return;
 
       const response = await fetch(
-        `http://localhost:5000/api/v1/jobs/nearby?latitude=${currentLocation.latitude}&longitude=${currentLocation.longitude}&radius=${searchRadius}`,
+        `http://localhost:4000/api/v1/jobs/nearby?latitude=${currentLocation.latitude}&longitude=${currentLocation.longitude}&radius=${searchRadius}`,
         {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -471,7 +471,7 @@ export default function NearbyJobsPage() {
       }
 
       // 채팅방 생성 API 호출
-      const response = await fetch('http://localhost:5000/api/v1/chat/rooms', {
+      const response = await fetch('http://localhost:4000/api/v1/chat/rooms', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -6,8 +6,11 @@ interface User {
   email: string;
   firstName?: string;
   lastName?: string;
+  name?: string;
   phone?: string;
   status?: string;
+  userType?: 'JOB_SEEKER' | 'EMPLOYER';
+  location?: string;
   createdAt?: string;
 }
 
