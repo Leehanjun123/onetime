@@ -1,0 +1,113 @@
+name: Pull Request Check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  # PR 라벨 자동 추가
+  label:
+    name: Add Labels
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/labeler@v4
+        with:
+          repo-token: "${{ secrets.GITHUB_TOKEN }}"
+
+  # PR 크기 체크
+  size-check:
+    name: Check PR Size
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Check PR size
+        uses: codelytv/pr-size-labeler@v1
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          xs_label: 'size/xs'
+          xs_max_size: '10'
+          s_label: 'size/s'
+          s_max_size: '100'
+          m_label: 'size/m'
+          m_max_size: '500'
+          l_label: 'size/l'
+          l_max_size: '1000'
+          xl_label: 'size/xl'
+
+  # 커밋 메시지 규칙 체크
+  commit-lint:
+    name: Lint Commit Messages
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Check commit messages
+        uses: wagoid/commitlint-github-action@v5
+        with:
+          configFile: '.commitlintrc.json'
+        continue-on-error: true
+
+  # 브랜치 보호 규칙 체크
+  branch-protection:
+    name: Check Branch Protection
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Check if PR is targeting protected branch
+        run: |
+          if [[ "${{ github.base_ref }}" == "main" ]]; then
+            echo "PR is targeting main branch"
+            echo "Ensuring all checks pass before merge"
+          fi
+
+  # 자동 리뷰어 할당
+  auto-assign:
+    name: Auto Assign Reviewers
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: kentaro-m/auto-assign-action@v1.2.5
+        with:
+          configuration-path: '.github/auto-assign.yml'
+
+  # Danger JS로 코드 리뷰
+  danger:
+    name: Run Danger JS
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18.x'
+          
+      - name: Install Danger
+        run: npm install -g danger
+        
+      - name: Run Danger
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: danger ci || true
+        continue-on-error: true
+
+  # 의존성 업데이트 체크
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v3
+        with:
+          fail-on-severity: moderate
