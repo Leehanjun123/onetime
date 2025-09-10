@@ -2,21 +2,9 @@ const { PrismaClient } = require('@prisma/client');
 const redis = require('redis');
 
 // Prisma Client 초기화
-let prisma = null;
-
-const initPrisma = () => {
-  if (!process.env.DATABASE_URL) {
-    console.warn('⚠️ DATABASE_URL이 설정되지 않았습니다. 데이터베이스 기능을 사용할 수 없습니다.');
-    return null;
-  }
-  
-  if (!prisma) {
-    prisma = new PrismaClient({
-      log: ['query', 'info', 'warn', 'error'],
-    });
-  }
-  return prisma;
-};
+const prisma = new PrismaClient({
+  log: ['query', 'info', 'warn', 'error'],
+});
 
 // Redis Client 초기화
 let redisClient = null;
@@ -47,13 +35,8 @@ const initRedis = async () => {
 // 데이터베이스 연결 테스트
 const testConnection = async () => {
   try {
-    const client = initPrisma();
-    if (!client) {
-      return { success: false, error: 'DATABASE_URL not configured' };
-    }
-    
     // PostgreSQL 연결 테스트
-    await client.$connect();
+    await prisma.$connect();
     console.log('✅ PostgreSQL 연결 성공');
     
     // Redis는 선택적으로 연결 (실패해도 서버는 계속 실행)
@@ -85,8 +68,7 @@ const disconnect = async () => {
 };
 
 module.exports = {
-  get prisma() { return initPrisma(); },
-  initPrisma,
+  prisma,
   initRedis,
   getRedisClient: () => redisClient,
   testConnection,
