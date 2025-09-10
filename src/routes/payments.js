@@ -1,312 +1,257 @@
 const express = require('express');
+const { body, validationResult, query } = require('express-validator');
+const { authenticateToken } = require('../middleware/auth');
+const PaymentService = require('../services/PaymentService');
+const SettlementService = require('../services/SettlementService');
+const logger = require('../utils/logger');
+
 const router = express.Router();
-const paymentService = require('../services/payment');
-const { authenticateToken } = require('../middlewares/auth');
-const { v4: uuidv4 } = require('uuid');
+const paymentService = new PaymentService();
+const settlementService = new SettlementService();
 
-// 결제 요청 생성
-router.post('/request', authenticateToken, async (req, res) => {
-  try {
-    const {
-      jobId,
-      amount,
-      orderName,
-      successUrl,
-      failUrl
-    } = req.body;
+// 결제 생성
+router.post('/create',
+  authenticateToken,
+  [
+    body('jobId').notEmpty().withMessage('일자리 ID는 필수입니다'),
+    body('workerId').notEmpty().withMessage('워커 ID는 필수입니다'),
+    body('amount').isInt({ min: 1 }).withMessage('결제 금액은 1원 이상이어야 합니다'),
+    body('orderName').notEmpty().withMessage('주문명은 필수입니다'),
+    body('customerName').notEmpty().withMessage('고객명은 필수입니다'),
+    body('customerEmail').isEmail().withMessage('유효한 이메일 주소를 입력해주세요'),
+    body('customerMobilePhone').optional().isMobilePhone('ko-KR'),
+  ],
+  async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          message: '입력 데이터가 올바르지 않습니다',
+          errors: errors.array()
+        });
+      }
 
-    if (!amount || !orderName) {
-      return res.status(400).json({
-        message: '필수 정보가 누락되었습니다'
+      const {
+        jobId,
+        workerId,
+        amount,
+        orderName,
+        customerName,
+        customerEmail,
+        customerMobilePhone
+      } = req.body;
+
+      const payment = await paymentService.createPayment({
+        jobId,
+        workerId,
+        businessId: req.user.userId,
+        amount: parseInt(amount),
+        orderName,
+        customerName,
+        customerEmail,
+        customerMobilePhone,
+      });
+
+      res.json({
+        success: true,
+        message: '결제가 생성되었습니다',
+        data: {
+          paymentId: payment.id,
+          orderId: payment.orderId,
+          amount: payment.amount,
+          customerName: payment.customerName,
+        }
+      });
+    } catch (error) {
+      logger.error('Payment creation error:', error);
+      res.status(500).json({
+        success: false,
+        message: error.message || '결제 생성에 실패했습니다'
       });
     }
-
-    // 주문 ID 생성 (UUID)
-    const orderId = `ORDER_${Date.now()}_${uuidv4().substring(0, 8)}`;
-
-    const result = await paymentService.createPaymentRequest({
-      userId: req.user.id,
-      jobId,
-      amount,
-      orderId,
-      orderName,
-      customerName: req.user.name,
-      customerEmail: req.user.email,
-      customerMobilePhone: req.user.phone,
-      successUrl,
-      failUrl
-    });
-
-    res.json({
-      message: '결제 요청이 생성되었습니다',
-      data: result
-    });
-  } catch (error) {
-    console.error('결제 요청 생성 오류:', error);
-    res.status(500).json({
-      message: '결제 요청 생성에 실패했습니다',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
   }
-});
+);
 
-// 결제 승인
-router.post('/confirm', async (req, res) => {
-  try {
-    const { paymentKey, orderId, amount } = req.body;
+// 결제 승인 (토스페이먼츠 웹훅)
+router.post('/confirm',
+  [
+    body('paymentKey').notEmpty().withMessage('결제 키는 필수입니다'),
+    body('orderId').notEmpty().withMessage('주문 ID는 필수입니다'),
+    body('amount').isInt({ min: 1 }).withMessage('결제 금액은 1원 이상이어야 합니다'),
+  ],
+  async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          message: '입력 데이터가 올바르지 않습니다',
+          errors: errors.array()
+        });
+      }
 
-    if (!paymentKey || !orderId || !amount) {
-      return res.status(400).json({
-        message: '필수 정보가 누락되었습니다'
+      const { paymentKey, orderId, amount } = req.body;
+
+      const payment = await paymentService.confirmPayment(
+        paymentKey,
+        orderId,
+        parseInt(amount)
+      );
+
+      res.json({
+        success: true,
+        message: '결제가 승인되었습니다',
+        data: {
+          paymentId: payment.id,
+          orderId: payment.orderId,
+          status: payment.status,
+          approvedAt: payment.approvedAt,
+        }
+      });
+    } catch (error) {
+      logger.error('Payment confirmation error:', error);
+      res.status(400).json({
+        success: false,
+        message: error.message || '결제 승인에 실패했습니다'
       });
     }
-
-    const result = await paymentService.confirmPayment(
-      paymentKey,
-      orderId,
-      amount
-    );
-
-    res.json({
-      message: '결제가 승인되었습니다',
-      data: result
-    });
-  } catch (error) {
-    console.error('결제 승인 오류:', error);
-    
-    const errorMessage = error.response?.data?.message || error.message;
-    const statusCode = error.response?.status || 500;
-    
-    res.status(statusCode).json({
-      message: '결제 승인에 실패했습니다',
-      error: errorMessage
-    });
   }
-});
+);
 
 // 결제 취소
-router.post('/cancel', authenticateToken, async (req, res) => {
-  try {
-    const { paymentKey, cancelReason, cancelAmount } = req.body;
+router.post('/cancel/:paymentId',
+  authenticateToken,
+  [
+    body('cancelReason').notEmpty().withMessage('취소 사유는 필수입니다'),
+    body('cancelAmount').optional().isInt({ min: 1 }),
+  ],
+  async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          message: '입력 데이터가 올바르지 않습니다',
+          errors: errors.array()
+        });
+      }
 
-    if (!paymentKey || !cancelReason) {
-      return res.status(400).json({
-        message: '필수 정보가 누락되었습니다'
+      const { paymentId } = req.params;
+      const { cancelReason, cancelAmount } = req.body;
+
+      const payment = await paymentService.cancelPayment(
+        paymentId,
+        cancelReason,
+        cancelAmount ? parseInt(cancelAmount) : null
+      );
+
+      res.json({
+        success: true,
+        message: '결제가 취소되었습니다',
+        data: {
+          paymentId: payment.id,
+          status: payment.status,
+          cancelledAt: payment.cancelledAt,
+          cancelAmount: payment.cancelAmount,
+        }
+      });
+    } catch (error) {
+      logger.error('Payment cancellation error:', error);
+      res.status(500).json({
+        success: false,
+        message: error.message || '결제 취소에 실패했습니다'
       });
     }
-
-    const result = await paymentService.cancelPayment(
-      paymentKey,
-      cancelReason,
-      cancelAmount
-    );
-
-    res.json({
-      message: '결제가 취소되었습니다',
-      data: result
-    });
-  } catch (error) {
-    console.error('결제 취소 오류:', error);
-    res.status(500).json({
-      message: '결제 취소에 실패했습니다',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
   }
-});
-
-// 결제 상태 조회
-router.get('/status/:paymentKeyOrOrderId', authenticateToken, async (req, res) => {
-  try {
-    const { paymentKeyOrOrderId } = req.params;
-
-    const result = await paymentService.getPaymentStatus(paymentKeyOrOrderId);
-
-    res.json({
-      message: '결제 상태 조회 성공',
-      data: result
-    });
-  } catch (error) {
-    console.error('결제 상태 조회 오류:', error);
-    res.status(500).json({
-      message: '결제 상태 조회에 실패했습니다',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
-  }
-});
-
-// 환불 요청
-router.post('/refund', authenticateToken, async (req, res) => {
-  try {
-    const { paymentKey, refundReason, refundAmount } = req.body;
-
-    if (!paymentKey || !refundReason) {
-      return res.status(400).json({
-        message: '필수 정보가 누락되었습니다'
-      });
-    }
-
-    const result = await paymentService.processRefund(
-      paymentKey,
-      refundReason,
-      refundAmount
-    );
-
-    res.json({
-      message: '환불이 처리되었습니다',
-      data: result
-    });
-  } catch (error) {
-    console.error('환불 처리 오류:', error);
-    res.status(500).json({
-      message: '환불 처리에 실패했습니다',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
-  }
-});
-
-// 정산 처리 (관리자 전용)
-router.post('/settlement/:jobId', authenticateToken, async (req, res) => {
-  try {
-    // 관리자 권한 체크
-    if (req.user.userType !== 'ADMIN') {
-      return res.status(403).json({
-        message: '관리자 권한이 필요합니다'
-      });
-    }
-
-    const { jobId } = req.params;
-
-    const result = await paymentService.processSettlement(jobId);
-
-    res.json({
-      message: '정산이 처리되었습니다',
-      data: result
-    });
-  } catch (error) {
-    console.error('정산 처리 오류:', error);
-    res.status(500).json({
-      message: '정산 처리에 실패했습니다',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
-  }
-});
-
-// 수수료 계산
-router.post('/calculate-fee', authenticateToken, async (req, res) => {
-  try {
-    const { amount } = req.body;
-
-    if (!amount) {
-      return res.status(400).json({
-        message: '금액을 입력해주세요'
-      });
-    }
-
-    const feeInfo = paymentService.calculateFee(amount, req.user.userType);
-
-    res.json({
-      message: '수수료 계산 완료',
-      data: feeInfo
-    });
-  } catch (error) {
-    console.error('수수료 계산 오류:', error);
-    res.status(500).json({
-      message: '수수료 계산에 실패했습니다',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
-  }
-});
+);
 
 // 결제 내역 조회
-router.get('/history', authenticateToken, async (req, res) => {
-  try {
-    const { page = 1, limit = 20, status } = req.query;
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-
-    const where = { userId: req.user.id };
-    if (status) where.status = status;
-
-    const [payments, total] = await Promise.all([
-      prisma.payment.findMany({
-        where,
-        include: {
-          job: {
-            select: {
-              id: true,
-              title: true,
-              wage: true
-            }
-          }
-        },
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: parseInt(limit)
-      }),
-      prisma.payment.count({ where })
-    ]);
-
-    res.json({
-      data: payments,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total,
-        pages: Math.ceil(total / parseInt(limit))
+router.get('/history',
+  authenticateToken,
+  [
+    query('page').optional().isInt({ min: 1 }),
+    query('limit').optional().isInt({ min: 1, max: 100 }),
+    query('status').optional().isIn(['PENDING', 'COMPLETED', 'FAILED', 'CANCELLED', 'REFUNDED']),
+    query('method').optional().isIn(['CARD', 'TRANSFER', 'VIRTUAL_ACCOUNT', 'MOBILE']),
+  ],
+  async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          message: '쿼리 매개변수가 올바르지 않습니다',
+          errors: errors.array()
+        });
       }
-    });
-  } catch (error) {
-    console.error('결제 내역 조회 오류:', error);
-    res.status(500).json({
-      message: '결제 내역 조회에 실패했습니다',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
+
+      const options = {
+        page: parseInt(req.query.page) || 1,
+        limit: parseInt(req.query.limit) || 20,
+        status: req.query.status,
+        method: req.query.method,
+      };
+
+      const result = await paymentService.getPaymentHistory(req.user.userId, options);
+
+      res.json({
+        success: true,
+        message: '결제 내역을 성공적으로 조회했습니다',
+        data: result
+      });
+    } catch (error) {
+      logger.error('Payment history error:', error);
+      res.status(500).json({
+        success: false,
+        message: '결제 내역 조회에 실패했습니다'
+      });
+    }
   }
-});
+);
 
-// 정산 내역 조회
-router.get('/settlements', authenticateToken, async (req, res) => {
-  try {
-    const { page = 1, limit = 20, status } = req.query;
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+// 지갑 정보 조회
+router.get('/wallet',
+  authenticateToken,
+  async (req, res) => {
+    try {
+      const wallet = await paymentService.prisma.wallet.findUnique({
+        where: { userId: req.user.userId },
+      });
 
-    const where = { workerId: req.user.id };
-    if (status) where.status = status;
+      if (!wallet) {
+        // 지갑이 없으면 생성
+        const newWallet = await paymentService.prisma.wallet.create({
+          data: {
+            userId: req.user.userId,
+            balance: 0,
+            pendingBalance: 0,
+            withdrawableBalance: 0,
+            totalEarned: 0,
+            totalWithdrawn: 0,
+          },
+        });
 
-    const [settlements, total] = await Promise.all([
-      prisma.settlement.findMany({
-        where,
-        include: {
-          job: {
-            select: {
-              id: true,
-              title: true,
-              workDate: true
-            }
-          }
-        },
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: parseInt(limit)
-      }),
-      prisma.settlement.count({ where })
-    ]);
-
-    res.json({
-      data: settlements,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total,
-        pages: Math.ceil(total / parseInt(limit))
+        return res.json({
+          success: true,
+          message: '지갑 정보를 성공적으로 조회했습니다',
+          data: newWallet
+        });
       }
-    });
-  } catch (error) {
-    console.error('정산 내역 조회 오류:', error);
-    res.status(500).json({
-      message: '정산 내역 조회에 실패했습니다',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
+
+      res.json({
+        success: true,
+        message: '지갑 정보를 성공적으로 조회했습니다',
+        data: wallet
+      });
+    } catch (error) {
+      logger.error('Wallet info error:', error);
+      res.status(500).json({
+        success: false,
+        message: '지갑 정보 조회에 실패했습니다'
+      });
+    }
   }
-});
+);
 
 module.exports = router;

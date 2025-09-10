@@ -46,7 +46,11 @@ model User {
   savedCompanies SavedCompany[] @relation("SavedCompanies")
   companySavedBy SavedCompany[] @relation("CompanySavedBy")
   payments     Payment[]
+  workerPayments Payment[]     @relation("WorkerPayments")
+  businessPayments Payment[]   @relation("BusinessPayments")
   settlements  Settlement[]
+  wallet       Wallet?
+  transactions Transaction[]
   notifications Notification[]
   verificationTokens VerificationToken[]
   portfolioFiles PortfolioFile[]
@@ -84,6 +88,7 @@ model Job {
   savedBy      SavedJob[]
   payments     Payment[]
   settlements  Settlement[]
+  settlementItems SettlementItem[]
 
   @@map("jobs")
 }
@@ -211,14 +216,18 @@ model SavedCompany {
   @@map("saved_companies")
 }
 
-// 결제 모델
+// 결제 모델 (개선됨)
 model Payment {
   id          String   @id @default(cuid())
   orderId     String   @unique
   paymentKey  String?  @unique
   amount      Int
+  feeAmount   Int      @default(0)
+  netAmount   Int
   status      PaymentStatus @default(PENDING)
   method      PaymentMethod @default(CARD)
+  pgProvider  String?  // 토스페이먼츠, 카카오페이 등
+  pgTransactionId String? @unique
   
   orderName   String
   customerName String
@@ -246,9 +255,63 @@ model Payment {
   userId      String?
   job         Job?     @relation(fields: [jobId], references: [id])
   jobId       String?
+  worker      User?    @relation("WorkerPayments", fields: [workerId], references: [id])
+  workerId    String?
+  business    User?    @relation("BusinessPayments", fields: [businessId], references: [id])
+  businessId  String?
   refunds     Refund[]
+  transactions Transaction[]
+  settlementItems SettlementItem[]
   
+  @@index([jobId])
+  @@index([workerId])
+  @@index([businessId])
+  @@index([status])
+  @@index([createdAt])
   @@map("payments")
+}
+
+// 트랜잭션 모델 (신규)
+model Transaction {
+  id          String   @id @default(cuid())
+  type        TransactionType
+  amount      Int
+  description String
+  referenceId String?  // 관련 엔티티 ID
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  
+  // 관계
+  payment     Payment? @relation(fields: [paymentId], references: [id])
+  paymentId   String?
+  user        User     @relation(fields: [userId], references: [id])
+  userId      String
+  
+  @@index([paymentId])
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt])
+  @@map("transactions")
+}
+
+// 지갑 모델 (신규)
+model Wallet {
+  id                  String   @id @default(cuid())
+  balance             Int      @default(0)
+  pendingBalance      Int      @default(0)
+  withdrawableBalance Int      @default(0)
+  totalEarned         Int      @default(0)
+  totalWithdrawn      Int      @default(0)
+  lastUpdatedAt       DateTime @default(now())
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // 관계
+  user        User     @relation(fields: [userId], references: [id])
+  userId      String   @unique
+  
+  @@map("wallets")
 }
 
 // 환불 모델
@@ -268,28 +331,59 @@ model Refund {
   @@map("refunds")
 }
 
-// 정산 모델
+// 정산 모델 (개선됨)
 model Settlement {
-  id          String   @id @default(cuid())
-  amount      Int
-  status      SettlementStatus @default(PENDING)
-  scheduledDate DateTime
-  completedAt DateTime?
+  id            String   @id @default(cuid())
+  amount        Int
+  feeAmount     Int      @default(0)
+  netAmount     Int
+  status        SettlementStatus @default(PENDING)
+  scheduledAt   DateTime
+  processedAt   DateTime?
   
-  bankName    String?
-  bankAccount String?
+  bankName      String?
+  bankAccount   String?
+  bankCode      String?
   accountHolder String?
+  failReason    String?
   
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  metadata      Json?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
   
   // 관계
-  worker      User     @relation(fields: [workerId], references: [id])
-  workerId    String
-  job         Job      @relation(fields: [jobId], references: [id])
-  jobId       String
+  worker        User     @relation(fields: [workerId], references: [id])
+  workerId      String
+  job           Job?     @relation(fields: [jobId], references: [id])
+  jobId         String?
+  items         SettlementItem[]
   
+  @@index([workerId])
+  @@index([status])
+  @@index([scheduledAt])
   @@map("settlements")
+}
+
+// 정산 항목 모델 (신규)
+model SettlementItem {
+  id            String   @id @default(cuid())
+  amount        Int
+  feeAmount     Int      @default(0)
+  netAmount     Int
+  createdAt     DateTime @default(now())
+  
+  // 관계
+  settlement    Settlement @relation(fields: [settlementId], references: [id])
+  settlementId  String
+  payment       Payment  @relation(fields: [paymentId], references: [id])
+  paymentId     String
+  job           Job      @relation(fields: [jobId], references: [id])
+  jobId         String
+  
+  @@unique([settlementId, paymentId])
+  @@index([paymentId])
+  @@index([jobId])
+  @@map("settlement_items")
 }
 
 // 알림 모델
@@ -415,6 +509,15 @@ enum SettlementStatus {
   PROCESSING
   COMPLETED
   FAILED
+}
+
+enum TransactionType {
+  PAYMENT
+  REFUND
+  SETTLEMENT
+  FEE
+  WITHDRAWAL
+  DEPOSIT
 }
 
 enum NotificationType {
