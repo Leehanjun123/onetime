@@ -3,7 +3,9 @@ nixPkgs = ['nodejs_20', 'python3']
 
 [phases.install]
 cmds = [
-    'npm ci',
+    'npm cache clean --force',
+    'rm -rf node_modules/.cache',
+    'npm ci --no-cache',
     'npx prisma generate'
 ]
 
