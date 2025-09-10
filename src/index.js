@@ -74,6 +74,13 @@ app.get('/health', (req, res) => {
     message: 'Server is healthy',
     database: dbConnection ? 'connected' : 'disconnected',
     socketio: io ? 'initialized' : 'not initialized',
+    routes: {
+      jobs: !!jobRoutes,
+      users: !!userRoutes, 
+      auth: !!authRoutes,
+      upload: !!uploadRoutes,
+      notifications: !!notificationRoutes
+    },
     timestamp: new Date().toISOString(),
     uptime: process.uptime()
   });
