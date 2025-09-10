@@ -174,17 +174,7 @@ app.post('/api/analytics/web-vitals', (req, res) => {
 });
 
 // V1 Auth endpoints (정확한 경로)
-app.post('/api/v1/auth/login', (req, res) => {
-  // 기존 auth 라우터로 리다이렉트
-  req.url = '/api/auth/login';
-  app._router.handle(req, res);
-});
-
-app.post('/api/v1/auth/register', (req, res) => {
-  // 기존 auth 라우터로 리다이렉트
-  req.url = '/api/auth/register';
-  app._router.handle(req, res);
-});
+app.use('/api/v1/auth', authRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
