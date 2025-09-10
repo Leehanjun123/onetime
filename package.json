@@ -7,7 +7,6 @@
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
     "build": "npx prisma generate",
-    "postinstall": "npx prisma generate",
     "db:migrate": "npx prisma migrate deploy",
     "db:push": "npx prisma db push",
     "db:reset": "npx prisma migrate reset",
@@ -36,7 +35,7 @@
     "prisma": "^6.15.0"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": "18.x"
   },
   "keywords": [
     "일데이",

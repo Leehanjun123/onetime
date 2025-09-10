@@ -27,8 +27,10 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// 데이터베이스 연결 테스트
-testConnection();
+// 데이터베이스 연결 테스트 (비동기)
+testConnection().catch(err => {
+  console.warn('⚠️ 데이터베이스 연결 실패, 서버는 계속 실행됩니다:', err.message);
+});
 
 // Health check endpoint
 app.get('/', (req, res) => {
@@ -39,12 +41,12 @@ app.get('/', (req, res) => {
   });
 });
 
-app.get('/health', async (req, res) => {
-  const dbStatus = await testConnection();
-  res.json({ 
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
     status: 'OK', 
     message: 'Server is healthy',
-    database: dbStatus.success ? 'connected' : 'disconnected'
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
   });
 });
 
