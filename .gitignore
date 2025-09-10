@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+frontend/node_modules
 /.pnp
 .pnp.*
 .yarn/*
@@ -16,13 +17,17 @@
 # next.js
 /.next/
 /out/
+frontend/.next/
+frontend/out/
 
 # production
 /build
+/dist
 
 # misc
 .DS_Store
 *.pem
+Thumbs.db
 
 # debug
 npm-debug.log*
@@ -39,3 +44,45 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Backend specific
+/src/generated/prisma
+/uploads
+*.log
+*.pid
+*.seed
+*.pid.lock
+/logs
+/tmp
+/temp
+
+# Database
+prisma/*.db
+prisma/*.db-journal
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Cache directories
+.cache/
+.parcel-cache/
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+.nyc_output/
+
+# Optional caches
+.npm
+.eslintcache
+.node_repl_history
+
+# Serverless directories
+.serverless
+
+# Railway
+.railway/

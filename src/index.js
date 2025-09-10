@@ -1,14 +1,24 @@
 const express = require('express');
+const http = require('http');
 const cors = require('cors');
+const { testConnection, disconnect } = require('./config/database');
+const { initializeSocket } = require('./config/socket');
 require('dotenv').config();
 
 const app = express();
+const server = http.createServer(app);
 const PORT = process.env.PORT || 5000;
+
+// Socket.IO 초기화
+const io = initializeSocket(server);
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// 데이터베이스 연결 테스트
+testConnection();
 
 // Health check endpoint
 app.get('/', (req, res) => {
@@ -19,39 +29,33 @@ app.get('/', (req, res) => {
   });
 });
 
-app.get('/health', (req, res) => {
-  res.json({ status: 'OK', message: 'Server is healthy' });
-});
-
-// API routes
-app.get('/api/jobs', (req, res) => {
+app.get('/health', async (req, res) => {
+  const dbStatus = await testConnection();
   res.json({ 
-    message: 'Jobs API endpoint',
-    jobs: []
+    status: 'OK', 
+    message: 'Server is healthy',
+    database: dbStatus.success ? 'connected' : 'disconnected'
   });
 });
 
-app.get('/api/users', (req, res) => {
-  res.json({ 
-    message: 'Users API endpoint',
-    users: []
-  });
-});
+// Static files middleware for uploaded files
+app.use('/uploads', express.static('uploads'));
 
-// Auth routes
-app.post('/api/auth/login', (req, res) => {
-  res.json({ message: 'Login endpoint - not implemented yet' });
-});
+// Import routes
+const jobRoutes = require('./routes/jobs');
+const userRoutes = require('./routes/users');
+const authRoutes = require('./routes/auth');
+const uploadRoutes = require('./routes/upload');
+const notificationRoutes = require('./routes/notifications');
 
-app.post('/api/auth/register', (req, res) => {
-  res.json({ message: 'Register endpoint - not implemented yet' });
-});
+// Use routes
+app.use('/api/jobs', jobRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/upload', uploadRoutes);
+app.use('/api/notifications', notificationRoutes);
 
-app.get('/api/auth/profile', (req, res) => {
-  res.json({ message: 'Profile endpoint - not implemented yet' });
-});
-
-// Notification routes
+// Notification routes (temporary endpoints)
 app.post('/api/v1/test-notification', (req, res) => {
   res.json({ message: 'Test notification sent successfully' });
 });
@@ -107,6 +111,39 @@ app.get('/api/v1/work-session/history', (req, res) => {
   res.json({ history: [] });
 });
 
+// Analytics API endpoints
+app.get('/api/analytics/dashboard', (req, res) => {
+  res.json({ 
+    stats: {
+      totalUsers: 127000,
+      totalJobs: 8500,
+      totalMatches: 45000,
+      averageRating: 4.8
+    },
+    charts: {
+      dailyRegistrations: [],
+      jobsByCategory: [],
+      revenueByMonth: []
+    }
+  });
+});
+
+app.get('/api/v1/analytics/dashboard', (req, res) => {
+  res.json({ 
+    stats: {
+      totalUsers: 127000,
+      totalJobs: 8500,
+      totalMatches: 45000,
+      averageRating: 4.8
+    },
+    charts: {
+      dailyRegistrations: [],
+      jobsByCategory: [],
+      revenueByMonth: []
+    }
+  });
+});
+
 // 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({ 
@@ -124,7 +161,22 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(PORT, '0.0.0.0', () => {
+// 서버 시작
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 일데이 Backend Server running on port ${PORT}`);
   console.log(`📍 Health check: http://localhost:${PORT}/health`);
+  console.log(`⚡ Socket.IO enabled for real-time notifications`);
+});
+
+// 앱 종료 시 정리
+process.on('SIGINT', async () => {
+  console.log('서버 종료 중...');
+  await disconnect();
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  console.log('서버 종료 중...');
+  await disconnect();
+  process.exit(0);
 });
