@@ -148,7 +148,7 @@ app.get('/health', (req, res) => {
 app.use('/uploads', express.static('uploads'));
 
 // Import routes with error handling (after health check endpoint)
-let jobRoutes, userRoutes, authRoutes, uploadRoutes, notificationRoutes, savedRoutes, paymentRoutes, adminRoutes, chatRoutes;
+let jobRoutes, userRoutes, authRoutes, uploadRoutes, notificationRoutes, savedRoutes, paymentRoutes, adminRoutes, chatRoutes, searchRoutes;
 
 try {
   jobRoutes = require('./routes/jobs');
@@ -213,6 +213,13 @@ try {
   console.error('❌ Failed to load chat routes:', err.message);
 }
 
+try {
+  searchRoutes = require('./routes/search');
+  console.log('✅ Search routes loaded');
+} catch (err) {
+  console.error('❌ Failed to load search routes:', err.message);
+}
+
 // Use routes with appropriate rate limiting
 if (jobRoutes) app.use('/api/jobs', rateLimiters.api, jobRoutes);
 if (userRoutes) app.use('/api/users', rateLimiters.api, userRoutes);
@@ -223,6 +230,7 @@ if (savedRoutes) app.use('/api/saved', rateLimiters.api, savedRoutes);
 if (paymentRoutes) app.use('/api/payments', rateLimiters.payment, paymentRoutes);
 if (adminRoutes) app.use('/api/admin', rateLimiters.api, adminRoutes);
 if (chatRoutes) app.use('/api/chat', rateLimiters.api, chatRoutes);
+if (searchRoutes) app.use('/api/search', rateLimiters.api, searchRoutes);
 
 // Debug endpoint for checking route loading status
 app.get('/debug', (req, res) => {
