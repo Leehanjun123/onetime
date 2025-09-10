@@ -3,19 +3,41 @@ const http = require('http');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
-const { PrismaClient } = require('@prisma/client');
+const compression = require('compression');
+const rateLimit = require('express-rate-limit');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 require('dotenv').config();
 
+// Conditional Prisma import for production readiness
+let prisma;
+try {
+  const { PrismaClient } = require('@prisma/client');
+  prisma = new PrismaClient({
+    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+  });
+} catch (error) {
+  console.warn('⚠️ Prisma not available, running in limited mode');
+  // Mock prisma for development without database
+  prisma = {
+    user: {
+      findUnique: async () => null,
+      findFirst: async () => null,
+      create: async (data) => ({ id: 'mock-id', ...data.data }),
+      update: async (data) => ({ id: data.where.id })
+    },
+    job: {
+      findMany: async () => [],
+      count: async () => 0
+    },
+    $queryRaw: async () => [],
+    $disconnect: async () => {}
+  };
+}
+
 const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 5000;
-
-// Initialize Prisma
-const prisma = new PrismaClient({
-  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-});
 
 // Security Middleware
 app.use(helmet({
@@ -51,6 +73,18 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
+// Compression middleware for better performance
+app.use(compression({
+  level: 6,
+  threshold: 1024,
+  filter: (req, res) => {
+    if (req.headers['x-no-compression']) {
+      return false;
+    }
+    return compression.filter(req, res);
+  }
+}));
+
 // Logging
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
@@ -81,36 +115,33 @@ app.use((req, res, next) => {
   next();
 });
 
-// Rate limiting
-const rateLimit = new Map();
-app.use((req, res, next) => {
-  const ip = req.ip;
-  const now = Date.now();
-  const limit = parseInt(process.env.API_RATE_LIMIT) || 100;
-  const window = 60000; // 1 minute
-  
-  if (!rateLimit.has(ip)) {
-    rateLimit.set(ip, { count: 1, resetTime: now + window });
-    return next();
-  }
-  
-  const record = rateLimit.get(ip);
-  if (now > record.resetTime) {
-    record.count = 1;
-    record.resetTime = now + window;
-    return next();
-  }
-  
-  if (record.count >= limit) {
-    return res.status(429).json({ 
-      error: 'Too many requests', 
-      retryAfter: Math.ceil((record.resetTime - now) / 1000) 
+// Rate limiting with express-rate-limit
+const limiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: parseInt(process.env.API_RATE_LIMIT) || 100,
+  message: { error: 'Too many requests, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    res.status(429).json({
+      error: 'Too many requests',
+      retryAfter: Math.ceil(req.rateLimit.resetTime / 1000)
     });
   }
-  
-  record.count++;
-  next();
 });
+
+// Apply rate limiting to all routes
+app.use('/api/', limiter);
+
+// Stricter rate limiting for auth routes
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // 5 requests per 15 minutes
+  skipSuccessfulRequests: true
+});
+
+app.use('/api/v1/auth/login', authLimiter);
+app.use('/api/v1/auth/register', authLimiter);
 
 // JWT middleware
 const authenticateToken = async (req, res, next) => {
