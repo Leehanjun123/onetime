@@ -1,0 +1,19 @@
+[phases.setup]
+nixPkgs = ['nodejs_20', 'python3']
+
+[phases.install]
+cmds = [
+    'npm ci',
+    'npx prisma generate'
+]
+
+[phases.build]
+cmds = [
+    'echo "Build phase completed"'
+]
+
+[start]
+cmd = 'npx prisma migrate deploy && npm start'
+
+[variables]
+NODE_ENV = 'production'
