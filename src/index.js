@@ -13,7 +13,17 @@ const PORT = process.env.PORT || 5000;
 const io = initializeSocket(server);
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: [
+    'http://localhost:3001',
+    'http://localhost:3000',
+    'https://frontend-leehanjun123s-projects.vercel.app',
+    'https://onetime-frontend.vercel.app'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

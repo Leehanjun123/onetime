@@ -98,9 +98,18 @@ router.post('/register', async (req, res) => {
     });
   } catch (error) {
     console.error('회원가입 오류:', error);
+    
+    // Prisma 연결 오류인 경우
+    if (error.code === 'P1001' || error.code === 'P1017') {
+      return res.status(503).json({ 
+        message: '데이터베이스 연결 오류입니다. 잠시 후 다시 시도해주세요.',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+    
     res.status(500).json({ 
       message: '회원가입에 실패했습니다',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
 });
@@ -175,9 +184,18 @@ router.post('/login', async (req, res) => {
     });
   } catch (error) {
     console.error('로그인 오류:', error);
+    
+    // Prisma 연결 오류인 경우
+    if (error.code === 'P1001' || error.code === 'P1017') {
+      return res.status(503).json({ 
+        message: '데이터베이스 연결 오류입니다. 잠시 후 다시 시도해주세요.',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+    
     res.status(500).json({ 
       message: '로그인에 실패했습니다',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
 });

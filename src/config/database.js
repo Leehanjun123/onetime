@@ -35,14 +35,22 @@ const initRedis = async () => {
 // 데이터베이스 연결 테스트
 const testConnection = async () => {
   try {
+    // PostgreSQL 연결 테스트
     await prisma.$connect();
     console.log('✅ PostgreSQL 연결 성공');
     
-    await initRedis();
+    // Redis는 선택적으로 연결 (실패해도 서버는 계속 실행)
+    try {
+      await initRedis();
+    } catch (redisError) {
+      console.warn('⚠️ Redis 연결 실패 (선택적 서비스):', redisError.message);
+    }
     
     return { success: true };
   } catch (error) {
-    console.error('❌ 데이터베이스 연결 실패:', error);
+    console.error('❌ PostgreSQL 연결 실패:', error);
+    // PostgreSQL 연결 실패는 심각한 문제이므로 서버 시작을 중단하지 않고 경고만 표시
+    console.warn('⚠️ 데이터베이스 없이 기본 API만 제공합니다.');
     return { success: false, error };
   }
 };
