@@ -92,8 +92,10 @@ router.post('/register', async (req, res) => {
 
     res.status(201).json({
       message: '회원가입이 완료되었습니다',
-      user,
-      token,
+      data: {
+        user,
+        token
+      },
       expiresIn: '7d'
     });
   } catch (error) {
@@ -178,8 +180,10 @@ router.post('/login', async (req, res) => {
 
     res.json({
       message: '로그인 성공',
-      user: userWithoutPassword,
-      token,
+      data: {
+        user: userWithoutPassword,
+        token
+      },
       expiresIn: '7d'
     });
   } catch (error) {

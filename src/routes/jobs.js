@@ -26,7 +26,8 @@ router.get('/', async (req, res) => {
             id: true,
             name: true,
             rating: true,
-            verified: true
+            verified: true,
+            avatar: true
           }
         },
         _count: {
@@ -45,8 +46,16 @@ router.get('/', async (req, res) => {
 
     const total = await prisma.job.count({ where });
 
+    // employer를 company로 매핑
+    const mappedJobs = jobs.map(job => ({
+      ...job,
+      company: job.employer,
+      employer: undefined,
+      applicationCount: job._count.applications
+    }));
+
     const responseData = {
-      jobs,
+      jobs: mappedJobs,
       pagination: {
         total,
         limit: parseInt(limit),

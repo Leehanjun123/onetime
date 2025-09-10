@@ -83,7 +83,7 @@ app.get('/health', (req, res) => {
 app.use('/uploads', express.static('uploads'));
 
 // Import routes with error handling (after health check endpoint)
-let jobRoutes, userRoutes, authRoutes, uploadRoutes, notificationRoutes;
+let jobRoutes, userRoutes, authRoutes, uploadRoutes, notificationRoutes, savedRoutes;
 
 try {
   jobRoutes = require('./routes/jobs');
@@ -120,12 +120,20 @@ try {
   console.error('❌ Failed to load notification routes:', err.message);
 }
 
+try {
+  savedRoutes = require('./routes/saved');
+  console.log('✅ Saved routes loaded');
+} catch (err) {
+  console.error('❌ Failed to load saved routes:', err.message);
+}
+
 // Use routes only if they loaded successfully
 if (jobRoutes) app.use('/api/jobs', jobRoutes);
 if (userRoutes) app.use('/api/users', userRoutes);
 if (authRoutes) app.use('/api/auth', authRoutes);
 if (uploadRoutes) app.use('/api/upload', uploadRoutes);
 if (notificationRoutes) app.use('/api/notifications', notificationRoutes);
+if (savedRoutes) app.use('/api/saved', savedRoutes);
 
 // Debug endpoint for checking route loading status
 app.get('/debug', (req, res) => {

@@ -32,6 +32,9 @@ model User {
   reviews     Review[]         @relation("ReviewsReceived")
   givenReviews Review[]        @relation("ReviewsGiven")
   workSessions WorkSession[]
+  savedJobs    SavedJob[]
+  savedCompanies SavedCompany[] @relation("SavedCompanies")
+  companySavedBy SavedCompany[] @relation("CompanySavedBy")
 
   @@map("users")
 }
@@ -57,6 +60,7 @@ model Job {
   applications JobApplication[]
   workSession  WorkSession?
   reviews      Review[]
+  savedBy      SavedJob[]
 
   @@map("jobs")
 }
@@ -151,4 +155,34 @@ enum SessionStatus {
   IN_PROGRESS
   COMPLETED
   CANCELLED
+}
+
+// 저장된 일자리 모델
+model SavedJob {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  
+  // 관계
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+  job    Job    @relation(fields: [jobId], references: [id])
+  jobId  String
+  
+  @@unique([userId, jobId])
+  @@map("saved_jobs")
+}
+
+// 저장된 회사 모델  
+model SavedCompany {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  
+  // 관계
+  user      User   @relation("SavedCompanies", fields: [userId], references: [id])
+  userId    String
+  company   User   @relation("CompanySavedBy", fields: [companyId], references: [id])
+  companyId String
+  
+  @@unique([userId, companyId])
+  @@map("saved_companies")
 }
