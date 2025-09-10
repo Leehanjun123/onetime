@@ -22,16 +22,20 @@ app.get('/', (req, res) => {
 app.post('/api/auth/register', (req, res) => {
   res.status(201).json({ 
     message: '회원가입이 완료되었습니다',
-    user: { id: 'test', email: req.body.email, name: req.body.name },
-    token: 'test-token'
+    data: {
+      user: { id: 'test', email: req.body.email, name: req.body.name },
+      token: 'test-token'
+    }
   });
 });
 
 app.post('/api/auth/login', (req, res) => {
   res.json({
     message: '로그인 성공',
-    user: { id: 'test', email: req.body.email },
-    token: 'test-token'
+    data: {
+      user: { id: 'test', email: req.body.email },
+      token: 'test-token'
+    }
   });
 });
 
@@ -39,16 +43,20 @@ app.post('/api/auth/login', (req, res) => {
 app.post('/api/v1/auth/register', (req, res) => {
   res.status(201).json({ 
     message: '회원가입이 완료되었습니다',
-    user: { id: 'test', email: req.body.email, name: req.body.name },
-    token: 'test-token'
+    data: {
+      user: { id: 'test', email: req.body.email, name: req.body.name },
+      token: 'test-token'
+    }
   });
 });
 
 app.post('/api/v1/auth/login', (req, res) => {
   res.json({
     message: '로그인 성공',
-    user: { id: 'test', email: req.body.email },
-    token: 'test-token'
+    data: {
+      user: { id: 'test', email: req.body.email },
+      token: 'test-token'
+    }
   });
 });
 
