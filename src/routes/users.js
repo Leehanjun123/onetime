@@ -1,5 +1,5 @@
 const express = require('express');
-const { prisma } = require('../config/database');
+const database = require('../config/database');
 const router = express.Router();
 
 // 모든 사용자 조회 (관리자용)
