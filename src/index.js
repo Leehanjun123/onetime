@@ -1,16 +1,15 @@
 const express = require('express');
 const http = require('http');
 const cors = require('cors');
-const { testConnection, disconnect } = require('./config/database');
-const { initializeSocket } = require('./config/socket');
 require('dotenv').config();
 
 const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 5000;
 
-// Socket.IO 초기화
-const io = initializeSocket(server);
+// Railway health check를 위해 초기화를 간소화
+let io = null;
+let dbConnection = null;
 
 // Middleware
 app.use(cors({
@@ -27,10 +26,38 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// 데이터베이스 연결 테스트 (비동기)
-testConnection().catch(err => {
-  console.warn('⚠️ 데이터베이스 연결 실패, 서버는 계속 실행됩니다:', err.message);
-});
+// 데이터베이스 연결을 비동기로 초기화 (health check 이후)
+const initializeServices = async () => {
+  try {
+    console.log('🔧 서비스 초기화 중...');
+    
+    // 데이터베이스 연결
+    try {
+      const { testConnection } = require('./config/database');
+      await testConnection();
+      dbConnection = true;
+    } catch (err) {
+      console.warn('⚠️ 데이터베이스 연결 실패, 서버는 계속 실행됩니다:', err.message);
+      dbConnection = false;
+    }
+    
+    // Socket.IO 초기화 (선택적)
+    try {
+      const { initializeSocket } = require('./config/socket');
+      io = initializeSocket(server);
+      console.log('✅ Socket.IO 초기화 완료');
+    } catch (err) {
+      console.warn('⚠️ Socket.IO 초기화 실패:', err.message);
+    }
+    
+    console.log('🚀 모든 서비스 초기화 완료');
+  } catch (error) {
+    console.error('❌ 서비스 초기화 오류:', error);
+  }
+};
+
+// 서버 시작 후 초기화 (health check를 방해하지 않음)
+setTimeout(initializeServices, 1000);
 
 // Health check endpoint
 app.get('/', (req, res) => {
@@ -45,6 +72,8 @@ app.get('/health', (req, res) => {
   res.status(200).json({ 
     status: 'OK', 
     message: 'Server is healthy',
+    database: dbConnection ? 'connected' : 'disconnected',
+    socketio: io ? 'initialized' : 'not initialized',
     timestamp: new Date().toISOString(),
     uptime: process.uptime()
   });
@@ -205,12 +234,26 @@ server.listen(PORT, '0.0.0.0', () => {
 // 앱 종료 시 정리
 process.on('SIGINT', async () => {
   console.log('서버 종료 중...');
-  await disconnect();
+  if (dbConnection) {
+    try {
+      const { disconnect } = require('./config/database');
+      await disconnect();
+    } catch (err) {
+      console.error('DB 연결 해제 오류:', err);
+    }
+  }
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
   console.log('서버 종료 중...');
-  await disconnect();
+  if (dbConnection) {
+    try {
+      const { disconnect } = require('./config/database');
+      await disconnect();
+    } catch (err) {
+      console.error('DB 연결 해제 오류:', err);
+    }
+  }
   process.exit(0);
 });
