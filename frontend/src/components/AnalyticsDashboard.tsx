@@ -188,7 +188,7 @@ export default function AnalyticsDashboard() {
             <div>
               <h4 className="font-semibold text-gray-800 mb-2">🏗️ 인기 직종</h4>
               <div className="space-y-1">
-                {behaviorData.topJobCategories.slice(0, 3).map((category, index) => (
+                {behaviorData?.topJobCategories?.slice(0, 3)?.map((category, index) => (
                   <div key={category.category} className="flex items-center justify-between text-sm">
                     <span className="flex items-center">
                       <span className="text-orange-600 mr-1">{index + 1}.</span>
@@ -207,7 +207,7 @@ export default function AnalyticsDashboard() {
             <div>
               <h4 className="font-semibold text-gray-800 mb-2">📱 디바이스</h4>
               <div className="space-y-1">
-                {behaviorData.deviceBreakdown.slice(0, 3).map((device) => (
+                {behaviorData?.deviceBreakdown?.slice(0, 3)?.map((device) => (
                   <div key={device.device} className="flex items-center justify-between text-sm">
                     <span>{device.device}</span>
                     <span className="font-semibold">{device.percentage}%</span>
@@ -220,10 +220,10 @@ export default function AnalyticsDashboard() {
             <div>
               <h4 className="font-semibold text-gray-800 mb-2">⏰ 시간대별 사용량</h4>
               <div className="flex items-end space-x-1 h-16">
-                {behaviorData.timeOfDayUsage
+                {behaviorData?.timeOfDayUsage
                   .filter(data => data.hour >= 6 && data.hour <= 22)
                   .map((data) => {
-                    const maxUsers = Math.max(...behaviorData.timeOfDayUsage.map(d => d.users));
+                    const maxUsers = Math.max(...(behaviorData?.timeOfDayUsage?.map(d => d.users) || [0]));
                     const height = Math.max(4, (data.users / maxUsers) * 60);
                     
                     return (
