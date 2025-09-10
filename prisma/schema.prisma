@@ -138,6 +138,7 @@ model Review {
 enum UserType {
   WORKER
   EMPLOYER
+  ADMIN
 }
 
 enum JobCategory {

@@ -83,7 +83,7 @@ app.get('/health', (req, res) => {
 app.use('/uploads', express.static('uploads'));
 
 // Import routes with error handling (after health check endpoint)
-let jobRoutes, userRoutes, authRoutes, uploadRoutes, notificationRoutes, savedRoutes, paymentRoutes;
+let jobRoutes, userRoutes, authRoutes, uploadRoutes, notificationRoutes, savedRoutes, paymentRoutes, adminRoutes;
 
 try {
   jobRoutes = require('./routes/jobs');
@@ -134,6 +134,13 @@ try {
   console.error('❌ Failed to load payment routes:', err.message);
 }
 
+try {
+  adminRoutes = require('./routes/admin');
+  console.log('✅ Admin routes loaded');
+} catch (err) {
+  console.error('❌ Failed to load admin routes:', err.message);
+}
+
 // Use routes only if they loaded successfully
 if (jobRoutes) app.use('/api/jobs', jobRoutes);
 if (userRoutes) app.use('/api/users', userRoutes);
@@ -142,6 +149,7 @@ if (uploadRoutes) app.use('/api/upload', uploadRoutes);
 if (notificationRoutes) app.use('/api/notifications', notificationRoutes);
 if (savedRoutes) app.use('/api/saved', savedRoutes);
 if (paymentRoutes) app.use('/api/payments', paymentRoutes);
+if (adminRoutes) app.use('/api/admin', adminRoutes);
 
 // Debug endpoint for checking route loading status
 app.get('/debug', (req, res) => {
