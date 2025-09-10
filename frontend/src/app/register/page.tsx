@@ -229,7 +229,7 @@ export default function RegisterPage() {
                     data-testid="register-email"
                     value={formData.email}
                     onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
                     placeholder="example@email.com"
                   />
                 </div>
@@ -244,7 +244,7 @@ export default function RegisterPage() {
                     data-testid="register-name"
                     value={formData.name}
                     onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
                     placeholder="홍길동"
                   />
                 </div>
@@ -259,7 +259,7 @@ export default function RegisterPage() {
                     data-testid="register-password"
                     value={formData.password}
                     onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
                     placeholder="8자 이상 입력"
                   />
                 </div>
@@ -274,7 +274,7 @@ export default function RegisterPage() {
                     data-testid="register-confirm-password"
                     value={formData.confirmPassword}
                     onChange={(e) => setFormData(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
                     placeholder="비밀번호 재입력"
                   />
                 </div>
@@ -288,7 +288,7 @@ export default function RegisterPage() {
                     required
                     value={formData.phone}
                     onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
                     placeholder="010-1234-5678"
                   />
                 </div>
@@ -337,7 +337,7 @@ export default function RegisterPage() {
                         type="date"
                         value={formData.birthDate}
                         onChange={(e) => setFormData(prev => ({ ...prev, birthDate: e.target.value }))}
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
                       />
                     </div>
 
@@ -348,7 +348,7 @@ export default function RegisterPage() {
                       <select
                         value={formData.gender}
                         onChange={(e) => setFormData(prev => ({ ...prev, gender: e.target.value }))}
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
                       >
                         <option value="">선택안함</option>
                         <option value="male">남성</option>
@@ -423,7 +423,7 @@ export default function RegisterPage() {
                         required
                         value={formData.companyName}
                         onChange={(e) => setFormData(prev => ({ ...prev, companyName: e.target.value }))}
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
                         placeholder="(주)원데이"
                       />
                     </div>
@@ -436,7 +436,7 @@ export default function RegisterPage() {
                         type="text"
                         value={formData.businessNumber}
                         onChange={(e) => setFormData(prev => ({ ...prev, businessNumber: e.target.value }))}
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
                         placeholder="123-45-67890"
                       />
                     </div>
@@ -448,7 +448,7 @@ export default function RegisterPage() {
                       <select
                         value={formData.industry}
                         onChange={(e) => setFormData(prev => ({ ...prev, industry: e.target.value }))}
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
                       >
                         <option value="">선택해주세요</option>
                         <option value="food">음식점/카페</option>
@@ -468,7 +468,7 @@ export default function RegisterPage() {
                       <select
                         value={formData.companySize}
                         onChange={(e) => setFormData(prev => ({ ...prev, companySize: e.target.value }))}
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
                       >
                         <option value="">선택해주세요</option>
                         <option value="1-10">1-10명</option>
@@ -488,7 +488,7 @@ export default function RegisterPage() {
                       rows={4}
                       value={formData.description}
                       onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
                       placeholder="회사에 대해 간단히 소개해주세요"
                     />
                   </div>

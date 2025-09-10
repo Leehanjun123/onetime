@@ -15,7 +15,7 @@ app.get('/health', (req, res) => {
 });
 
 app.get('/', (req, res) => {
-  res.json({ message: '일데이 Backend API is running!', version: '1.0.0' });
+  res.json({ message: '원데이 Backend API is running!', version: '1.0.0' });
 });
 
 // Simple auth endpoints without database dependencies
@@ -62,5 +62,5 @@ app.post('/api/v1/auth/login', (req, res) => {
 
 // Start server
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Minimal Backend Server running on port ${PORT}`);
+  console.log(`🚀 원데이 Minimal Backend Server running on port ${PORT}`);
 });

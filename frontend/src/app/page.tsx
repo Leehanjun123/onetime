@@ -221,7 +221,7 @@ export default function Home() {
       name: '김철수',
       role: '타일공 15년차',
       avatar: '👷‍♂️',
-      content: '일데이 덕분에 매월 안정적으로 일감을 구할 수 있게 되었어요. 특히 당일 정산이 정말 큰 도움이 됩니다.',
+      content: '원데이 덕분에 매월 안정적으로 일감을 구할 수 있게 되었어요. 특히 당일 정산이 정말 큰 도움이 됩니다.',
       rating: 5,
       location: '서울 강남구',
       earnings: '월 580만원'
@@ -536,7 +536,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold mb-6">실제 이용자 이야기</h2>
-            <p className="text-xl text-gray-600">일데이와 함께한 성공 스토리</p>
+            <p className="text-xl text-gray-600">원데이와 함께한 성공 스토리</p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">

@@ -43,7 +43,7 @@ export default function LoginPage() {
         <div>
           <div className="text-center">
             <Link href="/" className="text-3xl font-bold text-orange-600">
-              🔨 일데이
+              🔨 원데이
             </Link>
           </div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
@@ -102,7 +102,7 @@ export default function LoginPage() {
                 data-testid="login-email"
                 value={formData.email}
                 onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                className="relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                className="relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 font-medium rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                 placeholder="이메일 주소"
               />
             </div>
@@ -121,7 +121,7 @@ export default function LoginPage() {
                 data-testid="login-password"
                 value={formData.password}
                 onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                className="relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                className="relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 font-medium rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                 placeholder="비밀번호"
               />
             </div>
