@@ -1,0 +1,15 @@
+{
+  "presets": ["next/babel"],
+  "plugins": [
+    ["transform-remove-console", { "exclude": ["error", "warn"] }]
+  ],
+  "env": {
+    "production": {
+      "plugins": [
+        ["transform-remove-console", { "exclude": ["error", "warn"] }],
+        "transform-remove-debugger",
+        ["react-remove-properties", { "properties": ["data-testid"] }]
+      ]
+    }
+  }
+}

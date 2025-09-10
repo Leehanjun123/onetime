@@ -36,13 +36,13 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "일데이 - 당일 일용직 전문 매칭 플랫폼",
+  title: "원데이 - 당일 일용직 전문 매칭 플랫폼",
   description: "리모델링·인테리어 전문 일용직 매칭! 당일 정산, AI 매칭으로 쉽고 빠르게 일자리를 찾으세요.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "일데이",
+    title: "원데이",
   },
   icons: [
     { rel: "icon", url: "/icons/icon-192x192.png" },
@@ -52,8 +52,8 @@ export const metadata: Metadata = {
     "mobile-web-app-capable": "yes",
     "apple-mobile-web-app-capable": "yes",
     "apple-mobile-web-app-status-bar-style": "default",
-    "apple-mobile-web-app-title": "일데이",
-    "application-name": "일데이",
+    "apple-mobile-web-app-title": "원데이",
+    "application-name": "원데이",
     "msapplication-TileColor": "#ea580c",
     "msapplication-config": "/browserconfig.xml"
   }

@@ -1,17 +1,52 @@
 const express = require('express');
 const http = require('http');
 const cors = require('cors');
+const helmet = require('helmet');
+const compression = require('compression');
+const morgan = require('morgan');
 require('dotenv').config();
 
 const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 5000;
 
+// Import monitoring
+const {
+  initSentry,
+  createLogger,
+  PerformanceMonitor,
+  performanceMiddleware,
+  setupHealthCheck,
+  setupErrorHandler,
+  startMetricsCollector
+} = require('./config/monitoring');
+
+// Initialize monitoring
+const logger = createLogger();
+const performanceMonitor = new PerformanceMonitor();
+app.locals.logger = logger;
+
+// Initialize Sentry (must be before request handlers)
+const Sentry = initSentry(app);
+
 // Railway health check를 위해 초기화를 간소화
 let io = null;
 let dbConnection = null;
 
-// Middleware
+// Security & Performance Middleware
+app.use(helmet({
+  contentSecurityPolicy: false, // Allow for development
+  crossOriginEmbedderPolicy: false
+}));
+app.use(compression());
+
+// Logging middleware
+app.use(morgan('combined', { stream: logger.stream }));
+
+// Performance monitoring middleware
+app.use(performanceMiddleware(performanceMonitor));
+
+// CORS Middleware
 app.use(cors({
   origin: [
     'http://localhost:3001',
@@ -57,7 +92,19 @@ const initializeServices = async () => {
 };
 
 // 서버 시작 후 초기화 (health check를 방해하지 않음)
-setTimeout(initializeServices, 1000);
+setTimeout(async () => {
+  await initializeServices();
+  
+  // Setup enhanced health check after services are initialized
+  const { prisma } = require('./config/database');
+  const redis = require('./config/redis');
+  setupHealthCheck(app, performanceMonitor, prisma, redis);
+  
+  // Start metrics collector
+  startMetricsCollector(performanceMonitor, logger, 60000);
+  
+  logger.info('All monitoring services initialized');
+}, 1000);
 
 // Health check endpoint
 app.get('/', (req, res) => {
@@ -294,14 +341,8 @@ app.use('*', (req, res) => {
   });
 });
 
-// Error handler
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ 
-    message: 'Internal server error',
-    error: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong!'
-  });
-});
+// Setup Sentry error handler (must be after all routes)
+setupErrorHandler(app);
 
 // 서버 시작
 server.listen(PORT, '0.0.0.0', () => {

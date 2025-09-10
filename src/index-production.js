@@ -9,6 +9,17 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 require('dotenv').config();
 
+// Import monitoring
+const {
+  initSentry,
+  createLogger,
+  PerformanceMonitor,
+  performanceMiddleware,
+  setupHealthCheck,
+  setupErrorHandler,
+  startMetricsCollector
+} = require('./config/monitoring');
+
 // Conditional Prisma import for production readiness
 let prisma;
 try {
@@ -38,6 +49,14 @@ try {
 const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 5000;
+
+// Initialize monitoring
+const logger = createLogger();
+const performanceMonitor = new PerformanceMonitor();
+app.locals.logger = logger;
+
+// Initialize Sentry (must be before request handlers)
+const Sentry = initSentry(app);
 
 // Security Middleware
 app.use(helmet({
@@ -85,8 +104,11 @@ app.use(compression({
   }
 }));
 
-// Logging
-app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+// Logging with Winston
+app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev', { stream: logger.stream }));
+
+// Performance monitoring middleware
+app.use(performanceMiddleware(performanceMonitor));
 
 // Body parsing
 app.use(express.json({ limit: '10mb' }));
@@ -173,7 +195,7 @@ const authenticateToken = async (req, res, next) => {
   }
 };
 
-// Health check
+// Basic health check (enhanced version added after services init)
 app.get('/health', async (req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
@@ -192,6 +214,14 @@ app.get('/health', async (req, res) => {
     });
   }
 });
+
+// Setup enhanced health check and metrics
+setTimeout(() => {
+  const redis = require('./config/redis');
+  setupHealthCheck(app, performanceMonitor, prisma, redis);
+  startMetricsCollector(performanceMonitor, logger, 60000);
+  logger.info('Production monitoring services initialized');
+}, 2000);
 
 // Auth Routes
 app.post('/api/v1/auth/register', async (req, res) => {
@@ -372,22 +402,6 @@ app.get('/api/v1/jobs', async (req, res) => {
   }
 });
 
-// Global error handler
-app.use((err, req, res, next) => {
-  console.error('Global error:', err);
-  
-  // Log to monitoring service (e.g., Sentry)
-  if (process.env.SENTRY_DSN) {
-    // Sentry.captureException(err);
-  }
-  
-  res.status(err.status || 500).json({
-    error: 'Internal server error',
-    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong',
-    requestId: req.id
-  });
-});
-
 // 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({ 
@@ -395,6 +409,9 @@ app.use('*', (req, res) => {
     path: req.originalUrl 
   });
 });
+
+// Setup Sentry error handler (must be after all routes)
+setupErrorHandler(app);
 
 // Graceful shutdown
 const gracefulShutdown = async () => {
@@ -415,8 +432,9 @@ process.on('SIGINT', gracefulShutdown);
 
 // Start server
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Production server running on port ${PORT}`);
-  console.log(`📍 Environment: ${process.env.NODE_ENV}`);
-  console.log(`🔒 Security: Helmet enabled, CORS configured`);
-  console.log(`⚡ Rate limiting: ${process.env.API_RATE_LIMIT || 100} requests/minute`);
+  logger.info(`🚀 Production server running on port ${PORT}`);
+  logger.info(`📍 Environment: ${process.env.NODE_ENV}`);
+  logger.info(`🔒 Security: Helmet enabled, CORS configured`);
+  logger.info(`⚡ Rate limiting: ${process.env.API_RATE_LIMIT || 100} requests/minute`);
+  logger.info(`📊 Monitoring: Sentry ${process.env.SENTRY_DSN ? 'enabled' : 'disabled'}`);
 });
