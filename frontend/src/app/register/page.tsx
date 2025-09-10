@@ -48,7 +48,7 @@ export default function RegisterPage() {
 
     try {
       // 백엔드 API 호출 로직
-      const response = await fetch('http://localhost:4000/api/auth/register', {
+      const response = await fetch('https://onetime-production.up.railway.app/api/v1/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -87,8 +87,10 @@ export default function RegisterPage() {
   };
 
   const nextStep = () => {
-    if (step === 1) {
-      // 기본 정보 유효성 검사
+    console.log('nextStep called, current step:', step);
+    
+    if (step === 2) {
+      // Step 2에서 기본 정보 유효성 검사
       if (!formData.email || !formData.password || !formData.name || !formData.phone) {
         setError('모든 필수 정보를 입력해주세요.');
         return;
@@ -98,7 +100,9 @@ export default function RegisterPage() {
         return;
       }
     }
+    
     setError('');
+    console.log('Moving to step:', step + 1);
     setStep(step + 1);
   };
 
