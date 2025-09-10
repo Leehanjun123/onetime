@@ -33,12 +33,27 @@ const Sentry = initSentry(app);
 let io = null;
 let dbConnection = null;
 
+// Import security middleware
+const {
+  helmetConfig,
+  rateLimiters,
+  csrfMiddleware,
+  generateCSRFToken,
+  securityHeaders,
+  ipBlockingMiddleware,
+  xss,
+  hpp,
+  mongoSanitize
+} = require('./middleware/security');
+
 // Security & Performance Middleware
-app.use(helmet({
-  contentSecurityPolicy: false, // Allow for development
-  crossOriginEmbedderPolicy: false
-}));
+app.use(helmetConfig());
 app.use(compression());
+app.use(securityHeaders);
+app.use(ipBlockingMiddleware);
+app.use(xss);
+app.use(hpp);
+app.use(mongoSanitize);
 
 // Logging middleware
 app.use(morgan('combined', { stream: logger.stream }));
@@ -109,11 +124,14 @@ setTimeout(async () => {
 // Health check endpoint
 app.get('/', (req, res) => {
   res.json({ 
-    message: '일데이 Backend API is running!', 
+    message: '원데이 Backend API is running!', 
     version: '1.0.0',
     timestamp: new Date().toISOString()
   });
 });
+
+// CSRF Token endpoint
+app.get('/api/csrf-token', generateCSRFToken);
 
 app.get('/health', (req, res) => {
   res.status(200).json({ 
@@ -195,16 +213,16 @@ try {
   console.error('❌ Failed to load chat routes:', err.message);
 }
 
-// Use routes only if they loaded successfully
-if (jobRoutes) app.use('/api/jobs', jobRoutes);
-if (userRoutes) app.use('/api/users', userRoutes);
-if (authRoutes) app.use('/api/auth', authRoutes);
-if (uploadRoutes) app.use('/api/upload', uploadRoutes);
-if (notificationRoutes) app.use('/api/notifications', notificationRoutes);
-if (savedRoutes) app.use('/api/saved', savedRoutes);
-if (paymentRoutes) app.use('/api/payments', paymentRoutes);
-if (adminRoutes) app.use('/api/admin', adminRoutes);
-if (chatRoutes) app.use('/api/chat', chatRoutes);
+// Use routes with appropriate rate limiting
+if (jobRoutes) app.use('/api/jobs', rateLimiters.api, jobRoutes);
+if (userRoutes) app.use('/api/users', rateLimiters.api, userRoutes);
+if (authRoutes) app.use('/api/auth', rateLimiters.auth, authRoutes);
+if (uploadRoutes) app.use('/api/upload', rateLimiters.upload, uploadRoutes);
+if (notificationRoutes) app.use('/api/notifications', rateLimiters.api, notificationRoutes);
+if (savedRoutes) app.use('/api/saved', rateLimiters.api, savedRoutes);
+if (paymentRoutes) app.use('/api/payments', rateLimiters.payment, paymentRoutes);
+if (adminRoutes) app.use('/api/admin', rateLimiters.api, adminRoutes);
+if (chatRoutes) app.use('/api/chat', rateLimiters.api, chatRoutes);
 
 // Debug endpoint for checking route loading status
 app.get('/debug', (req, res) => {
