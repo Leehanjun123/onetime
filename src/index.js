@@ -74,13 +74,6 @@ app.get('/health', (req, res) => {
     message: 'Server is healthy',
     database: dbConnection ? 'connected' : 'disconnected',
     socketio: io ? 'initialized' : 'not initialized',
-    routes: {
-      jobs: !!jobRoutes,
-      users: !!userRoutes, 
-      auth: !!authRoutes,
-      upload: !!uploadRoutes,
-      notifications: !!notificationRoutes
-    },
     timestamp: new Date().toISOString(),
     uptime: process.uptime()
   });
@@ -89,7 +82,7 @@ app.get('/health', (req, res) => {
 // Static files middleware for uploaded files
 app.use('/uploads', express.static('uploads'));
 
-// Import routes with error handling
+// Import routes with error handling (after health check endpoint)
 let jobRoutes, userRoutes, authRoutes, uploadRoutes, notificationRoutes;
 
 try {
@@ -133,6 +126,22 @@ if (userRoutes) app.use('/api/users', userRoutes);
 if (authRoutes) app.use('/api/auth', authRoutes);
 if (uploadRoutes) app.use('/api/upload', uploadRoutes);
 if (notificationRoutes) app.use('/api/notifications', notificationRoutes);
+
+// Debug endpoint for checking route loading status
+app.get('/debug', (req, res) => {
+  res.json({
+    routes: {
+      jobs: !!jobRoutes,
+      users: !!userRoutes, 
+      auth: !!authRoutes,
+      upload: !!uploadRoutes,
+      notifications: !!notificationRoutes
+    },
+    nodeVersion: process.version,
+    environment: process.env.NODE_ENV,
+    timestamp: new Date().toISOString()
+  });
+});
 
 // Notification routes (temporary endpoints)
 app.post('/api/v1/test-notification', (req, res) => {
