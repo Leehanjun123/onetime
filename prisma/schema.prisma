@@ -23,6 +23,10 @@ model User {
   rating      Float    @default(0.0)
   totalEarned Int      @default(0)
   lastLoginAt DateTime?
+  isOnline    Boolean  @default(false)
+  lastSeenAt  DateTime?
+  pushToken   String?
+  notificationSettings Json?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -35,6 +39,9 @@ model User {
   savedJobs    SavedJob[]
   savedCompanies SavedCompany[] @relation("SavedCompanies")
   companySavedBy SavedCompany[] @relation("CompanySavedBy")
+  payments     Payment[]
+  settlements  Settlement[]
+  notifications Notification[]
 
   @@map("users")
 }
@@ -61,6 +68,8 @@ model Job {
   workSession  WorkSession?
   reviews      Review[]
   savedBy      SavedJob[]
+  payments     Payment[]
+  settlements  Settlement[]
 
   @@map("jobs")
 }
@@ -185,4 +194,150 @@ model SavedCompany {
   
   @@unique([userId, companyId])
   @@map("saved_companies")
+}
+
+// 결제 모델
+model Payment {
+  id          String   @id @default(cuid())
+  orderId     String   @unique
+  paymentKey  String?  @unique
+  amount      Int
+  status      PaymentStatus @default(PENDING)
+  method      PaymentMethod @default(CARD)
+  
+  orderName   String
+  customerName String
+  customerEmail String
+  customerMobilePhone String?
+  
+  approvedAt  DateTime?
+  cancelledAt DateTime?
+  failedAt    DateTime?
+  
+  cancelReason String?
+  cancelAmount Int?
+  refundedAmount Int @default(0)
+  failReason  String?
+  
+  receipt     Json?
+  transactionKey String?
+  metadata    Json?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // 관계
+  user        User?    @relation(fields: [userId], references: [id])
+  userId      String?
+  job         Job?     @relation(fields: [jobId], references: [id])
+  jobId       String?
+  refunds     Refund[]
+  
+  @@map("payments")
+}
+
+// 환불 모델
+model Refund {
+  id          String   @id @default(cuid())
+  amount      Int
+  reason      String
+  status      RefundStatus @default(PENDING)
+  refundedAt  DateTime?
+  
+  createdAt   DateTime @default(now())
+  
+  // 관계
+  payment     Payment  @relation(fields: [paymentId], references: [id])
+  paymentId   String
+  
+  @@map("refunds")
+}
+
+// 정산 모델
+model Settlement {
+  id          String   @id @default(cuid())
+  amount      Int
+  status      SettlementStatus @default(PENDING)
+  scheduledDate DateTime
+  completedAt DateTime?
+  
+  bankName    String?
+  bankAccount String?
+  accountHolder String?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // 관계
+  worker      User     @relation(fields: [workerId], references: [id])
+  workerId    String
+  job         Job      @relation(fields: [jobId], references: [id])
+  jobId       String
+  
+  @@map("settlements")
+}
+
+// 알림 모델
+model Notification {
+  id          String   @id @default(cuid())
+  type        NotificationType
+  title       String
+  message     String
+  read        Boolean  @default(false)
+  readAt      DateTime?
+  relatedId   String?  // 관련 엔티티 ID
+  metadata    Json?
+  
+  createdAt   DateTime @default(now())
+  
+  // 관계
+  user        User     @relation(fields: [userId], references: [id])
+  userId      String
+  
+  @@index([userId, read])
+  @@index([userId, createdAt])
+  @@map("notifications")
+}
+
+// Enums
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  CANCELLED
+  REFUNDED
+  PARTIAL_REFUNDED
+}
+
+enum PaymentMethod {
+  CARD
+  TRANSFER
+  VIRTUAL_ACCOUNT
+  MOBILE
+}
+
+enum RefundStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+enum SettlementStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum NotificationType {
+  SYSTEM
+  JOB_APPLICATION
+  APPLICATION_STATUS
+  PAYMENT
+  SETTLEMENT
+  CHAT
+  REVIEW
+  JOB_SUGGESTION
+  NEW_APPLICATION
+  APPLICATION_CANCELLED
 }
