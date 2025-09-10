@@ -82,19 +82,50 @@ app.get('/health', (req, res) => {
 // Static files middleware for uploaded files
 app.use('/uploads', express.static('uploads'));
 
-// Import routes
-const jobRoutes = require('./routes/jobs');
-const userRoutes = require('./routes/users');
-const authRoutes = require('./routes/auth');
-const uploadRoutes = require('./routes/upload');
-const notificationRoutes = require('./routes/notifications');
+// Import routes with error handling
+let jobRoutes, userRoutes, authRoutes, uploadRoutes, notificationRoutes;
 
-// Use routes
-app.use('/api/jobs', jobRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/auth', authRoutes);
-app.use('/api/upload', uploadRoutes);
-app.use('/api/notifications', notificationRoutes);
+try {
+  jobRoutes = require('./routes/jobs');
+  console.log('✅ Jobs routes loaded');
+} catch (err) {
+  console.error('❌ Failed to load jobs routes:', err.message);
+}
+
+try {
+  userRoutes = require('./routes/users');
+  console.log('✅ Users routes loaded');
+} catch (err) {
+  console.error('❌ Failed to load users routes:', err.message);
+}
+
+try {
+  authRoutes = require('./routes/auth');
+  console.log('✅ Auth routes loaded');
+} catch (err) {
+  console.error('❌ Failed to load auth routes:', err.message);
+}
+
+try {
+  uploadRoutes = require('./routes/upload');
+  console.log('✅ Upload routes loaded');
+} catch (err) {
+  console.error('❌ Failed to load upload routes:', err.message);
+}
+
+try {
+  notificationRoutes = require('./routes/notifications');
+  console.log('✅ Notification routes loaded');
+} catch (err) {
+  console.error('❌ Failed to load notification routes:', err.message);
+}
+
+// Use routes only if they loaded successfully
+if (jobRoutes) app.use('/api/jobs', jobRoutes);
+if (userRoutes) app.use('/api/users', userRoutes);
+if (authRoutes) app.use('/api/auth', authRoutes);
+if (uploadRoutes) app.use('/api/upload', uploadRoutes);
+if (notificationRoutes) app.use('/api/notifications', notificationRoutes);
 
 // Notification routes (temporary endpoints)
 app.post('/api/v1/test-notification', (req, res) => {
