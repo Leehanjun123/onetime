@@ -44,6 +44,9 @@ model User {
   notifications Notification[]
   verificationTokens VerificationToken[]
   portfolioFiles PortfolioFile[]
+  conversations1 Conversation[] @relation("ConversationUser1")
+  conversations2 Conversation[] @relation("ConversationUser2")
+  messages Message[]
 
   @@map("users")
 }
@@ -334,6 +337,47 @@ model PortfolioFile {
   @@map("portfolio_files")
 }
 
+// 대화방 모델
+model Conversation {
+  id            String   @id @default(cuid())
+  user1Id       String
+  user2Id       String
+  lastMessage   String?
+  lastMessageAt DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  user1         User     @relation("ConversationUser1", fields: [user1Id], references: [id])
+  user2         User     @relation("ConversationUser2", fields: [user2Id], references: [id])
+  messages      Message[]
+
+  @@unique([user1Id, user2Id])
+  @@index([user1Id])
+  @@index([user2Id])
+  @@index([lastMessageAt])
+  @@map("conversations")
+}
+
+// 메시지 모델
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  senderId       String
+  content        String
+  type           MessageType  @default(TEXT)
+  read           Boolean      @default(false)
+  readAt         DateTime?
+  createdAt      DateTime     @default(now())
+  
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User         @relation(fields: [senderId], references: [id])
+
+  @@index([conversationId])
+  @@index([senderId])
+  @@index([createdAt])
+  @@map("messages")
+}
+
 // Enums
 enum PaymentStatus {
   PENDING
@@ -381,4 +425,11 @@ enum TokenType {
   EMAIL_VERIFY
   PASSWORD_RESET
   PHONE_VERIFY
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  FILE
+  SYSTEM
 }
