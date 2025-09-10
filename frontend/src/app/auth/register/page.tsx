@@ -49,7 +49,7 @@ export default function SimpleRegister() {
     setLoading(true);
     try {
       // SMS 인증 코드 발송 API 호출
-      const response = await fetch('https://onetime-production.up.railway.app/api/v1/auth/send-sms', {
+      const response = await fetch('https://onetime-production.up.railway.app/api/auth/send-sms', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -85,7 +85,7 @@ export default function SimpleRegister() {
     setLoading(true);
     try {
       // 인증번호 검증 API 호출
-      const response = await fetch('https://onetime-production.up.railway.app/api/v1/auth/verify-sms', {
+      const response = await fetch('https://onetime-production.up.railway.app/api/auth/verify-sms', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -151,7 +151,7 @@ export default function SimpleRegister() {
 
     setLoading(true);
     try {
-      const response = await fetch('https://onetime-production.up.railway.app/api/v1/auth/register', {
+      const response = await fetch('https://onetime-production.up.railway.app/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
