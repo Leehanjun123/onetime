@@ -3,6 +3,72 @@ const { prisma } = require('../config/database');
 const cache = require('../services/cache');
 const router = express.Router();
 
+/**
+ * @swagger
+ * tags:
+ *   name: Jobs
+ *   description: 일자리 관리 API
+ */
+
+/**
+ * @swagger
+ * /jobs:
+ *   get:
+ *     summary: 일자리 목록 조회
+ *     tags: [Jobs]
+ *     security: []
+ *     parameters:
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *           enum: [CONSTRUCTION, INTERIOR, LOGISTICS, FACTORY, CLEANING, DELIVERY]
+ *         description: 카테고리 필터
+ *       - in: query
+ *         name: location
+ *         schema:
+ *           type: string
+ *         description: 위치 필터
+ *       - in: query
+ *         name: urgent
+ *         schema:
+ *           type: boolean
+ *         description: 긴급 모집만 조회
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: 조회할 개수
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *         description: 건너뛸 개수
+ *     responses:
+ *       200:
+ *         description: 일자리 목록 조회 성공
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 jobs:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Job'
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: integer
+ *                     limit:
+ *                       type: integer
+ *                     offset:
+ *                       type: integer
+ */
+
 // 모든 일자리 조회
 router.get('/', async (req, res) => {
   try {

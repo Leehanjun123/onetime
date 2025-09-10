@@ -46,6 +46,9 @@ const {
   mongoSanitize
 } = require('./middleware/security');
 
+// Import Swagger configuration
+const { swaggerUi, specs } = require('./config/swagger');
+
 // Security & Performance Middleware
 app.use(helmetConfig());
 app.use(compression());
@@ -133,6 +136,24 @@ app.get('/', (req, res) => {
 // CSRF Token endpoint
 app.get('/api/csrf-token', generateCSRFToken);
 
+// API Documentation
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(specs, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: '원데이 API 문서',
+  customfavIcon: '/favicon.ico',
+  swaggerOptions: {
+    persistAuthorization: true,
+    displayRequestDuration: true,
+    docExpansion: 'none',
+    filter: true,
+    showExtensions: true,
+    showCommonExtensions: true,
+    defaultModelRendering: 'example',
+    defaultModelsExpandDepth: 1,
+    defaultModelExpandDepth: 1
+  }
+}));
+
 app.get('/health', (req, res) => {
   res.status(200).json({ 
     status: 'OK', 
@@ -218,6 +239,7 @@ try {
   console.log('✅ Search routes loaded');
 } catch (err) {
   console.error('❌ Failed to load search routes:', err.message);
+  searchRoutes = null;
 }
 
 // Use routes with appropriate rate limiting

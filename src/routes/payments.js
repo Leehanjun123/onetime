@@ -9,6 +9,85 @@ const router = express.Router();
 const paymentService = new PaymentService();
 const settlementService = new SettlementService();
 
+/**
+ * @swagger
+ * tags:
+ *   name: Payments
+ *   description: 결제 및 정산 관련 API
+ */
+
+/**
+ * @swagger
+ * /payments/create:
+ *   post:
+ *     summary: 결제 생성
+ *     tags: [Payments]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - jobId
+ *               - workerId
+ *               - amount
+ *               - orderName
+ *               - customerName
+ *               - customerEmail
+ *             properties:
+ *               jobId:
+ *                 type: string
+ *                 description: 일자리 ID
+ *                 example: "job_123"
+ *               workerId:
+ *                 type: string
+ *                 description: 워커 ID
+ *                 example: "worker_456"
+ *               amount:
+ *                 type: integer
+ *                 minimum: 1
+ *                 description: 결제 금액 (원)
+ *                 example: 50000
+ *               orderName:
+ *                 type: string
+ *                 description: 주문명
+ *                 example: "카페 알바 결제"
+ *               customerName:
+ *                 type: string
+ *                 description: 고객명
+ *                 example: "홍길동"
+ *               customerEmail:
+ *                 type: string
+ *                 format: email
+ *                 description: 고객 이메일
+ *                 example: "customer@example.com"
+ *               customerMobilePhone:
+ *                 type: string
+ *                 description: 고객 휴대폰 번호
+ *                 example: "010-1234-5678"
+ *     responses:
+ *       200:
+ *         description: 결제 생성 성공
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Success'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/Payment'
+ *       400:
+ *         description: 잘못된 요청
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
 // 결제 생성
 router.post('/create',
   authenticateToken,

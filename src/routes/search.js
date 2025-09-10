@@ -7,6 +7,148 @@ const logger = require('../utils/logger');
 const router = express.Router();
 const elasticsearchService = new ElasticsearchService();
 
+/**
+ * @swagger
+ * tags:
+ *   name: Search
+ *   description: 검색 관련 API (ElasticSearch 기반)
+ */
+
+/**
+ * @swagger
+ * /search/jobs:
+ *   get:
+ *     summary: 일자리 검색
+ *     tags: [Search]
+ *     security: []
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         schema:
+ *           type: string
+ *           maxLength: 100
+ *         description: 검색 키워드
+ *         example: "카페 알바"
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: 페이지 번호
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 20
+ *         description: 페이지당 결과 수
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *           enum: [CONSTRUCTION, INTERIOR, LOGISTICS, FACTORY, CLEANING, DELIVERY]
+ *         description: 카테고리 필터
+ *       - in: query
+ *         name: location
+ *         schema:
+ *           type: string
+ *           maxLength: 50
+ *         description: 위치 필터
+ *         example: "서울 강남구"
+ *       - in: query
+ *         name: minWage
+ *         schema:
+ *           type: integer
+ *           minimum: 0
+ *         description: 최소 시급
+ *       - in: query
+ *         name: maxWage
+ *         schema:
+ *           type: integer
+ *           minimum: 0
+ *         description: 최대 시급
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [relevance, wage_desc, wage_asc, date_desc, date_asc, work_date, distance]
+ *           default: relevance
+ *         description: 정렬 기준
+ *       - in: query
+ *         name: urgent
+ *         schema:
+ *           type: boolean
+ *         description: 긴급 모집만 검색
+ *       - in: query
+ *         name: lat
+ *         schema:
+ *           type: number
+ *           format: float
+ *           minimum: -90
+ *           maximum: 90
+ *         description: 위도 (거리 검색용)
+ *       - in: query
+ *         name: lng
+ *         schema:
+ *           type: number
+ *           format: float
+ *           minimum: -180
+ *           maximum: 180
+ *         description: 경도 (거리 검색용)
+ *       - in: query
+ *         name: radius
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 10
+ *         description: 검색 반경 (km)
+ *     responses:
+ *       200:
+ *         description: 검색 성공
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Success'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         jobs:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/Job'
+ *                         pagination:
+ *                           type: object
+ *                           properties:
+ *                             page:
+ *                               type: integer
+ *                             limit:
+ *                               type: integer
+ *                             total:
+ *                               type: integer
+ *                             totalPages:
+ *                               type: integer
+ *                         meta:
+ *                           type: object
+ *                           properties:
+ *                             maxScore:
+ *                               type: number
+ *                             took:
+ *                               type: integer
+ *                               description: 검색 소요 시간 (ms)
+ *       400:
+ *         description: 잘못된 요청
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
 // 일자리 검색
 router.get('/jobs',
   optionalAuth, // 로그인 선택사항

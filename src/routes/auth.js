@@ -7,6 +7,84 @@ const emailService = require('../services/email');
 const crypto = require('crypto');
 const router = express.Router();
 
+/**
+ * @swagger
+ * tags:
+ *   name: Authentication
+ *   description: 사용자 인증 관련 API
+ */
+
+/**
+ * @swagger
+ * /auth/register:
+ *   post:
+ *     summary: 회원가입
+ *     tags: [Authentication]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - name
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: 이메일 주소
+ *                 example: "user@example.com"
+ *               phone:
+ *                 type: string
+ *                 description: 전화번호
+ *                 example: "010-1234-5678"
+ *               name:
+ *                 type: string
+ *                 description: 사용자 이름
+ *                 example: "홍길동"
+ *               password:
+ *                 type: string
+ *                 format: password
+ *                 description: 비밀번호 (8자 이상, 영문+숫자+특수문자)
+ *                 example: "Password123!"
+ *               userType:
+ *                 type: string
+ *                 enum: [WORKER, EMPLOYER]
+ *                 description: 사용자 유형
+ *                 example: "WORKER"
+ *               avatar:
+ *                 type: string
+ *                 description: 프로필 이미지 URL
+ *                 example: "https://example.com/avatar.jpg"
+ *     responses:
+ *       200:
+ *         description: 회원가입 성공
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Success'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         user:
+ *                           $ref: '#/components/schemas/User'
+ *                         token:
+ *                           type: string
+ *                           description: JWT 토큰
+ *       400:
+ *         description: 잘못된 요청
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
 // 이메일/전화번호로 회원가입
 router.post('/register', async (req, res) => {
   try {
