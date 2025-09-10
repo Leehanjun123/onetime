@@ -1,5 +1,5 @@
 const express = require('express');
-const database = require('../config/database');
+const { prisma } = require('../config/database');
 const cache = require('../services/cache');
 const router = express.Router();
 

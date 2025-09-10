@@ -1,7 +1,7 @@
 const express = require('express');
 const { uploadConfigs, handleUploadError, getFileUrl, deleteFile } = require('../middlewares/upload');
 const { authenticateToken } = require('../middlewares/auth');
-const database = require('../config/database');
+const { prisma } = require('../config/database');
 const router = express.Router();
 
 // 사용자 아바타 업로드

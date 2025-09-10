@@ -1,5 +1,5 @@
 const express = require('express');
-const database = require('../config/database');
+const { prisma } = require('../config/database');
 const { generateToken, verifyToken } = require('../utils/jwt');
 const { hashPassword, comparePassword, validatePassword } = require('../utils/password');
 const { authenticateToken, optionalAuth } = require('../middlewares/auth');
@@ -35,11 +35,6 @@ router.post('/register', async (req, res) => {
     }
 
     // 이메일 중복 확인
-    const prisma = database.prisma;
-    if (!prisma) {
-      return res.status(503).json({ message: '데이터베이스 연결 오류' });
-    }
-    
     const existingUser = await prisma.user.findUnique({
       where: { email }
     });
