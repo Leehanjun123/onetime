@@ -154,6 +154,38 @@ app.get('/api/v1/analytics/dashboard', (req, res) => {
   });
 });
 
+// Web Vitals API endpoint
+app.get('/api/analytics/web-vitals', (req, res) => {
+  res.json({
+    vitals: {
+      fcp: 1.2,
+      lcp: 2.1,
+      cls: 0.05,
+      fid: 8.3,
+      ttfb: 0.8
+    }
+  });
+});
+
+app.post('/api/analytics/web-vitals', (req, res) => {
+  // Web Vitals 데이터를 로깅/저장
+  console.log('Web Vitals data received:', req.body);
+  res.json({ success: true });
+});
+
+// V1 Auth endpoints (정확한 경로)
+app.post('/api/v1/auth/login', (req, res) => {
+  // 기존 auth 라우터로 리다이렉트
+  req.url = '/api/auth/login';
+  app._router.handle(req, res);
+});
+
+app.post('/api/v1/auth/register', (req, res) => {
+  // 기존 auth 라우터로 리다이렉트
+  req.url = '/api/auth/register';
+  app._router.handle(req, res);
+});
+
 // 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({ 

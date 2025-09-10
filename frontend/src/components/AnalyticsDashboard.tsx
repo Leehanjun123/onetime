@@ -168,19 +168,19 @@ export default function AnalyticsDashboard() {
             <div className="grid grid-cols-2 gap-2 text-sm">
               <div className="bg-blue-50 p-2 rounded">
                 <div className="text-blue-600 font-semibold">페이지뷰</div>
-                <div className="text-xl font-bold">{metrics.pageViews.toLocaleString()}</div>
+                <div className="text-xl font-bold">{metrics?.pageViews?.toLocaleString() || '0'}</div>
               </div>
               <div className="bg-green-50 p-2 rounded">
                 <div className="text-green-600 font-semibold">고유 사용자</div>
-                <div className="text-xl font-bold">{metrics.uniqueUsers.toLocaleString()}</div>
+                <div className="text-xl font-bold">{metrics?.uniqueUsers?.toLocaleString() || '0'}</div>
               </div>
               <div className="bg-orange-50 p-2 rounded">
                 <div className="text-orange-600 font-semibold">평균 세션</div>
-                <div className="text-xl font-bold">{Math.floor(metrics.averageSessionDuration / 60)}분</div>
+                <div className="text-xl font-bold">{Math.floor((metrics?.averageSessionDuration || 0) / 60)}분</div>
               </div>
               <div className="bg-purple-50 p-2 rounded">
                 <div className="text-purple-600 font-semibold">전환율</div>
-                <div className="text-xl font-bold">{metrics.conversionRate}%</div>
+                <div className="text-xl font-bold">{metrics?.conversionRate || 0}%</div>
               </div>
             </div>
 
@@ -248,19 +248,19 @@ export default function AnalyticsDashboard() {
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div className="flex justify-between">
                   <span>일자리 지원</span>
-                  <span className="font-semibold text-green-600">{metrics.jobApplications}</span>
+                  <span className="font-semibold text-green-600">{metrics?.jobApplications || 0}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>신규 가입</span>
-                  <span className="font-semibold text-blue-600">{metrics.registrations}</span>
+                  <span className="font-semibold text-blue-600">{metrics?.registrations || 0}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>오프라인 사용</span>
-                  <span className="font-semibold text-purple-600">{metrics.offlineUsage}%</span>
+                  <span className="font-semibold text-purple-600">{metrics?.offlineUsage || 0}%</span>
                 </div>
                 <div className="flex justify-between">
                   <span>이탈률</span>
-                  <span className="font-semibold text-red-600">{metrics.bounceRate}%</span>
+                  <span className="font-semibold text-red-600">{metrics?.bounceRate || 0}%</span>
                 </div>
               </div>
             </div>
