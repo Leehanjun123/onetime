@@ -33,9 +33,9 @@ function initSentry(app) {
     // Tracing Handler
     app.use(Sentry.Handlers.tracingHandler());
     
-    console.log('✅ Sentry monitoring initialized');
+    logger.info('✅ Sentry monitoring initialized');
   } else {
-    console.log('⚠️  Sentry DSN not configured');
+    logger.info('⚠️  Sentry DSN not configured');
   }
   
   return Sentry;

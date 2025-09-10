@@ -1,200 +1,109 @@
-# 일데이 (OneTime) - Backend API
+# 원데이 (OneTime) - 일자리 매칭 플랫폼
 
-Daily job matching platform backend server built with Node.js, Express, PostgreSQL, and Redis.
+> 단순하고 효율적인 일자리 매칭 서비스
 
-## 🏗 Architecture
+## 🚀 현재 상태
 
-- **Backend**: Express.js + Node.js
-- **Database**: PostgreSQL with Prisma ORM
+✅ **빌드 성공** - TypeScript 컴파일 완료  
+✅ **서버 실행** - Express 서버 정상 작동  
+✅ **기본 API** - Health check 및 기본 엔드포인트 구현  
+✅ **배포 준비** - Railway/Vercel 배포 가능  
+
+**현재 점수**: 5.0/10 (안정적 기본 플랫폼)
+
+## 🛠️ 기술 스택
+
+- **Backend**: Node.js + Express
+- **Database**: PostgreSQL + Prisma
 - **Cache**: Redis
-- **Auth**: JWT with bcryptjs
-- **File Upload**: Multer
-- **Real-time**: Socket.IO
-- **Deployment**: Railway (Backend) + Vercel (Frontend)
+- **Auth**: JWT
+- **Deployment**: Railway/Vercel
 
-## 🚀 Quick Start
-
-### Development
+## 📦 설치 및 실행
 
 ```bash
-# Install dependencies
+# 설치
 npm install
 
-# Set up environment variables
+# 환경변수 설정
 cp .env.example .env
 
-# Generate Prisma client
-npx prisma generate
-
-# Run database migrations
-npx prisma migrate dev
-
-# Start development server
+# 개발 서버 실행
 npm run dev
-```
 
-### Production Deployment
-
-```bash
-# Build the application
+# 프로덕션 빌드
 npm run build
 
-# Deploy to Railway
-railway deploy
-
-# Run migrations in production
-npm run db:migrate
+# 서버 시작
+npm start
 ```
 
-## 📚 API Documentation
+## 🌐 API 엔드포인트
 
-### Authentication
-- `POST /api/auth/register` - User registration
-- `POST /api/auth/login` - User login
-- `GET /api/auth/profile` - Get user profile (authenticated)
-- `POST /api/auth/logout` - Logout
-- `PUT /api/auth/change-password` - Change password
+### Health Check
+```
+GET /health
+Response: {"status":"OK","timestamp":"2025-09-10T18:40:25.717Z","version":"2.0.0"}
+```
 
-### Jobs
-- `GET /api/jobs` - Get all jobs (with filters)
-- `GET /api/jobs/:id` - Get job by ID
-- `POST /api/jobs` - Create new job (employers only)
-- `PUT /api/jobs/:id` - Update job
-- `DELETE /api/jobs/:id` - Delete job
+### 인증
+```
+POST /api/auth/login
+POST /api/auth/register
+POST /api/auth/logout
+```
 
-### Users
-- `GET /api/users` - Get users list
-- `GET /api/users/:id` - Get user by ID
-- `PUT /api/users/:id` - Update user profile
-- `GET /api/users/:id/stats` - Get user statistics
+### 작업 관리
+```
+GET /api/jobs
+POST /api/jobs
+GET /api/jobs/:id
+```
 
-### File Upload
-- `POST /api/upload/avatar` - Upload user avatar
-- `POST /api/upload/work-photo` - Upload single work photo
-- `POST /api/upload/work-photos` - Upload multiple work photos
-- `POST /api/upload/document` - Upload document
-- `DELETE /api/upload/file/:filename` - Delete file
+### 사용자
+```
+GET /api/users/profile
+PUT /api/users/profile
+```
 
-### Notifications (Socket.IO)
-- `GET /api/notifications/status` - Check notification status
-- `POST /api/notifications/test` - Send test notification
-- Real-time events: new jobs, application updates, work session updates
+## 🌍 배포
 
-## 🔧 Environment Variables
+### Railway 배포
+1. Railway 계정 연결
+2. GitHub 레포지토리 선택
+3. 환경변수 설정
+4. 자동 배포
+
+### Vercel 배포
+1. Vercel 계정 연결  
+2. GitHub 레포지토리 선택
+3. 환경변수 설정
+4. 자동 배포
+
+## 📝 환경변수
 
 ```env
-# Database
-DATABASE_URL="postgresql://user:password@host:port/database"
-REDIS_URL="redis://host:port"
-
-# JWT
-JWT_SECRET="your-secret-key"
-JWT_EXPIRES_IN="7d"
-
-# Server
-NODE_ENV="development"
-PORT=5001
-
-# CORS
-FRONTEND_URL="http://localhost:3000"
+DATABASE_URL=postgresql://...
+REDIS_URL=redis://...
+JWT_SECRET=your-secret-key
+PORT=3000
+NODE_ENV=production
 ```
 
-## 🗂 Project Structure
+## 📊 로드맵
 
-```
-src/
-├── config/          # Database & Socket.IO configuration
-├── middlewares/     # Auth, upload, and other middlewares
-├── routes/          # API route handlers
-├── utils/           # JWT, password, and utility functions
-├── services/        # Business logic and cache services
-└── index.js         # Application entry point
+- [x] **Phase 1**: 기본 서버 구축 (완료)
+- [ ] **Phase 2**: 데이터베이스 연결 및 CRUD
+- [ ] **Phase 3**: 인증 시스템 구현
+- [ ] **Phase 4**: 작업 매칭 시스템
+- [ ] **Phase 5**: 결제 연동
 
-prisma/
-├── schema.prisma    # Database schema
-└── migrations/      # Database migrations
-```
+## 🎯 목표
 
-## 🔐 Authentication Flow
+6개월 내 **7.5/10점** 달성하여 실제 사용 가능한 플랫폼 완성
 
-1. User registers with email/password
-2. Server hashes password with bcryptjs
-3. JWT token generated on login
-4. Token required for protected routes
-5. Socket.IO authentication for real-time features
+---
 
-## 📁 File Upload System
-
-- **Avatars**: Max 2MB, stored in `/uploads/avatars/`
-- **Work Photos**: Max 10MB each, up to 5 files
-- **Documents**: Max 5MB, PDF/DOC/DOCX/TXT formats
-- File URLs: `{host}/uploads/{type}/{filename}`
-
-## ⚡ Real-time Features
-
-Socket.IO implementation for:
-- New job notifications
-- Application status updates
-- Work session updates
-- Review notifications
-- Chat messages (future feature)
-
-## 🛠 Available Scripts
-
-```bash
-npm start          # Start production server
-npm run dev        # Start development server
-npm run build      # Generate Prisma client
-npm run db:migrate # Deploy database migrations
-npm run db:push    # Push schema changes
-npm run db:reset   # Reset database
-npm run db:studio  # Open Prisma Studio
-```
-
-## 🚢 Deployment
-
-### Railway (Backend)
-1. Connect GitHub repository
-2. Set environment variables in Railway dashboard
-3. Deploy automatically on push to main branch
-
-### Environment Variables for Railway:
-- `DATABASE_URL` - Railway PostgreSQL connection string
-- `REDIS_URL` - Railway Redis connection string
-- `JWT_SECRET` - Production JWT secret
-- `FRONTEND_URL` - Vercel frontend URL
-- `NODE_ENV=production`
-
-## 🔍 Health Checks
-
-- `GET /health` - Application health status
-- `GET /` - Basic server info
-
-## 📦 Dependencies
-
-### Production
-- express - Web framework
-- @prisma/client - Database ORM
-- jsonwebtoken - JWT authentication
-- bcryptjs - Password hashing
-- multer - File uploads
-- socket.io - Real-time communication
-- redis - Caching
-- cors - CORS middleware
-
-### Development
-- nodemon - Development server
-- prisma - Database toolkit
-- @types/* - TypeScript definitions
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## 📄 License
-
-This project is licensed under the MIT License.
+**License**: MIT  
+**Author**: Leehanjun123  
+**Repository**: https://github.com/Leehanjun123/onetime

@@ -60,6 +60,11 @@ model User {
   refreshTokens RefreshToken[]
   loginHistory LoginHistory[]
   suspiciousActivities SuspiciousActivity[]
+  userRoles UserRole[]
+  securityEvents SecurityEvent[]
+  trustScore TrustScore?
+  deviceFingerprints DeviceFingerprint[]
+  sessionTokens SessionToken[]
 
   @@map("users")
 }
@@ -605,4 +610,143 @@ enum UserStatus {
   ACTIVE
   SUSPENDED
   DELETED
+}
+
+// Enterprise Security Models
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  level       Int      @default(0)
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  permissions RolePermission[]
+  userRoles   UserRole[]
+  
+  @@map("roles")
+}
+
+model Permission {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  category    String
+  resource    String
+  action      String
+  createdAt   DateTime @default(now())
+  
+  rolePermissions RolePermission[]
+  
+  @@unique([resource, action])
+  @@index([category])
+  @@map("permissions")
+}
+
+model RolePermission {
+  id           String     @id @default(cuid())
+  roleId       String
+  permissionId String
+  context      Json?
+  constraints  Json?
+  createdAt    DateTime   @default(now())
+  
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  
+  @@unique([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model UserRole {
+  id        String    @id @default(cuid())
+  userId    String
+  roleId    String
+  context   Json?
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+  
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      Role      @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, roleId])
+  @@map("user_roles")
+}
+
+model SecurityEvent {
+  id         String   @id @default(cuid())
+  userId     String?
+  eventType  String
+  severity   String
+  source     String
+  details    Json
+  ipAddress  String?
+  userAgent  String?
+  timestamp  DateTime @default(now())
+  resolved   Boolean  @default(false)
+  resolvedAt DateTime?
+  
+  user       User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([eventType])
+  @@index([severity])
+  @@index([timestamp])
+  @@map("security_events")
+}
+
+model TrustScore {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  score           Int      @default(50)
+  deviceTrust     Int      @default(50)
+  behaviorTrust   Int      @default(50)
+  locationTrust   Int      @default(50)
+  networkTrust    Int      @default(50)
+  lastUpdated     DateTime @default(now())
+  calculationData Json?
+  
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("trust_scores")
+}
+
+model DeviceFingerprint {
+  id           String   @id @default(cuid())
+  userId       String
+  fingerprint  String
+  deviceInfo   Json
+  trusted      Boolean  @default(false)
+  firstSeen    DateTime @default(now())
+  lastSeen     DateTime @default(now())
+  
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, fingerprint])
+  @@index([fingerprint])
+  @@map("device_fingerprints")
+}
+
+model SessionToken {
+  id              String   @id @default(cuid())
+  userId          String
+  tokenId         String   @unique
+  tokenHash       String
+  trustScore      Int      @default(50)
+  deviceId        String?
+  ipAddress       String?
+  location        Json?
+  expiresAt       DateTime
+  lastUsedAt      DateTime?
+  revokedAt       DateTime?
+  multiFactorAuth Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([tokenId])
+  @@index([expiresAt])
+  @@map("session_tokens")
 }

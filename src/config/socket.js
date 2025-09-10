@@ -1,6 +1,7 @@
 const { Server } = require('socket.io');
 const { verifyToken } = require('../utils/jwt');
 const { prisma } = require('./database');
+const { logger } = require('../utils/logger');
 
 let io;
 
@@ -45,14 +46,14 @@ const initializeSocket = (server) => {
       socket.user = user;
       next();
     } catch (error) {
-      console.error('Socket authentication error:', error);
+      logger.error('Socket authentication error:', error);
       next(new Error('Authentication failed'));
     }
   });
 
   // 소켓 연결 처리
   io.on('connection', (socket) => {
-    console.log(`사용자 연결됨: ${socket.user.name} (${socket.userId})`);
+    logger.info(`사용자 연결됨: ${socket.user.name} (${socket.userId})`);
     
     // 사용자 연결 정보 저장
     connectedUsers.set(socket.userId, {
@@ -136,13 +137,13 @@ const initializeSocket = (server) => {
 
     // 연결 해제 처리
     socket.on('disconnect', (reason) => {
-      console.log(`사용자 연결 해제됨: ${socket.user.name} (${socket.userId}) - ${reason}`);
+      logger.info(`사용자 연결 해제됨: ${socket.user.name} (${socket.userId}) - ${reason}`);
       connectedUsers.delete(socket.userId);
     });
 
     // 에러 처리
     socket.on('error', (error) => {
-      console.error('Socket error:', error);
+      logger.error('Socket error:', error);
     });
   });
 

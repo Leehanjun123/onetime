@@ -1,5 +1,6 @@
 const { verifyToken, getUserFromToken } = require('../utils/jwt');
 const { prisma } = require('../config/database');
+const { logger } = require('../utils/logger');
 
 /**
  * JWT 토큰 검증 미들웨어
@@ -45,7 +46,7 @@ const authenticateToken = async (req, res, next) => {
     
     next();
   } catch (error) {
-    console.error('Token verification error:', error);
+    logger.error('Token verification error:', error);
     
     if (error.name === 'TokenExpiredError') {
       return res.status(401).json({ 

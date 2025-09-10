@@ -1,6 +1,7 @@
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const { logger } = require('../utils/logger');
 
 // 업로드 디렉토리 확인 및 생성
 const ensureDirectoryExists = (dirPath) => {
@@ -183,7 +184,7 @@ const deleteFile = (filePath) => {
     }
     return false;
   } catch (error) {
-    console.error('File deletion error:', error);
+    logger.error('File deletion error:', error);
     return false;
   }
 };

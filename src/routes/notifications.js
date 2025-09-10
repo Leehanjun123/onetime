@@ -1,6 +1,7 @@
 const express = require('express');
 const { authenticateToken } = require('../middlewares/auth');
 const { sendNotification, getConnectedUsers, getConnectedUserCount, isUserConnected } = require('../config/socket');
+const { logger } = require('../utils/logger');
 const router = express.Router();
 
 // 실시간 알림 상태 확인
@@ -20,7 +21,7 @@ router.get('/status', authenticateToken, (req, res) => {
       }
     });
   } catch (error) {
-    console.error('알림 상태 확인 오류:', error);
+    logger.error('알림 상태 확인 오류:', error);
     res.status(500).json({
       message: '알림 상태 확인에 실패했습니다',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
@@ -52,7 +53,7 @@ router.get('/connected-users', authenticateToken, (req, res) => {
       }))
     });
   } catch (error) {
-    console.error('연결된 사용자 조회 오류:', error);
+    logger.error('연결된 사용자 조회 오류:', error);
     res.status(500).json({
       message: '연결된 사용자 조회에 실패했습니다',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
@@ -87,7 +88,7 @@ router.post('/test', authenticateToken, (req, res) => {
       }
     });
   } catch (error) {
-    console.error('테스트 알림 전송 오류:', error);
+    logger.error('테스트 알림 전송 오류:', error);
     res.status(500).json({
       message: '테스트 알림 전송에 실패했습니다',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
@@ -114,7 +115,7 @@ router.post('/job-created', authenticateToken, (req, res) => {
       jobId: jobData.id
     });
   } catch (error) {
-    console.error('일자리 알림 전송 오류:', error);
+    logger.error('일자리 알림 전송 오류:', error);
     res.status(500).json({
       message: '일자리 알림 전송에 실패했습니다',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
@@ -141,7 +142,7 @@ router.post('/application-update', authenticateToken, (req, res) => {
       applicationId: applicationData.id
     });
   } catch (error) {
-    console.error('지원 상태 알림 전송 오류:', error);
+    logger.error('지원 상태 알림 전송 오류:', error);
     res.status(500).json({
       message: '지원 상태 알림 전송에 실패했습니다',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
@@ -168,7 +169,7 @@ router.post('/work-session-update', authenticateToken, (req, res) => {
       sessionId: sessionData.id
     });
   } catch (error) {
-    console.error('작업 세션 알림 전송 오류:', error);
+    logger.error('작업 세션 알림 전송 오류:', error);
     res.status(500).json({
       message: '작업 세션 알림 전송에 실패했습니다',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
@@ -195,7 +196,7 @@ router.post('/review-created', authenticateToken, (req, res) => {
       reviewId: reviewData.id
     });
   } catch (error) {
-    console.error('리뷰 알림 전송 오류:', error);
+    logger.error('리뷰 알림 전송 오류:', error);
     res.status(500).json({
       message: '리뷰 알림 전송에 실패했습니다',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined

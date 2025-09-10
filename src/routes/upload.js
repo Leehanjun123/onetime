@@ -3,6 +3,7 @@ const router = express.Router();
 const uploadService = require('../services/upload');
 const { authenticateToken } = require('../middlewares/auth');
 const redis = require('../config/redis');
+const { logger } = require('../utils/logger');
 
 // 프로필 이미지 업로드
 router.post('/profile-image', 
@@ -26,7 +27,7 @@ router.post('/profile-image',
         data: result
       });
     } catch (error) {
-      console.error('프로필 이미지 업로드 오류:', error);
+      logger.error('프로필 이미지 업로드 오류:', error);
       res.status(500).json({
         message: '프로필 이미지 업로드에 실패했습니다',
         error: process.env.NODE_ENV === 'development' ? error.message : undefined
@@ -73,7 +74,7 @@ router.post('/portfolio',
         data: result
       });
     } catch (error) {
-      console.error('포트폴리오 업로드 오류:', error);
+      logger.error('포트폴리오 업로드 오류:', error);
       res.status(500).json({
         message: '포트폴리오 업로드에 실패했습니다',
         error: process.env.NODE_ENV === 'development' ? error.message : undefined
@@ -105,7 +106,7 @@ router.get('/portfolio', authenticateToken, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('포트폴리오 조회 오류:', error);
+    logger.error('포트폴리오 조회 오류:', error);
     res.status(500).json({
       message: '포트폴리오 조회에 실패했습니다',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
@@ -145,7 +146,7 @@ router.delete('/portfolio/:fileId', authenticateToken, async (req, res) => {
       message: '파일이 삭제되었습니다'
     });
   } catch (error) {
-    console.error('파일 삭제 오류:', error);
+    logger.error('파일 삭제 오류:', error);
     res.status(500).json({
       message: '파일 삭제에 실패했습니다',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
@@ -168,7 +169,7 @@ router.get('/storage-usage', authenticateToken, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('스토리지 사용량 조회 오류:', error);
+    logger.error('스토리지 사용량 조회 오류:', error);
     res.status(500).json({
       message: '스토리지 사용량 조회에 실패했습니다',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined

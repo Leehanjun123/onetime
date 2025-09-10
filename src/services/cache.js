@@ -1,4 +1,5 @@
 const { getRedisClient } = require('../config/database');
+const { logger } = require('../utils/logger');
 
 class CacheService {
   constructor() {
@@ -17,7 +18,7 @@ class CacheService {
       const data = await this.client.get(key);
       return data ? JSON.parse(data) : null;
     } catch (error) {
-      console.error('Cache get error:', error);
+      logger.error('Cache get error:', error);
       return null;
     }
   }
@@ -28,7 +29,7 @@ class CacheService {
       await this.client.setEx(key, ttl, JSON.stringify(value));
       return true;
     } catch (error) {
-      console.error('Cache set error:', error);
+      logger.error('Cache set error:', error);
       return false;
     }
   }
@@ -39,7 +40,7 @@ class CacheService {
       await this.client.del(key);
       return true;
     } catch (error) {
-      console.error('Cache delete error:', error);
+      logger.error('Cache delete error:', error);
       return false;
     }
   }
@@ -50,7 +51,7 @@ class CacheService {
       await this.client.flushAll();
       return true;
     } catch (error) {
-      console.error('Cache flush error:', error);
+      logger.error('Cache flush error:', error);
       return false;
     }
   }
@@ -83,7 +84,7 @@ class CacheService {
       }
       return true;
     } catch (error) {
-      console.error('Cache delete pattern error:', error);
+      logger.error('Cache delete pattern error:', error);
       return false;
     }
   }

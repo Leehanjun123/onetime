@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const { prisma } = require('../config/database');
 const redis = require('../config/redis');
 const validator = require('validator');
+const { logger } = require('../utils/logger');
 
 class AuthService {
   constructor() {
@@ -149,7 +150,7 @@ class AuthService {
 
       return null;
     } catch (error) {
-      console.error('Refresh token validation error:', error);
+      logger.error('Refresh token validation error:', error);
       return null;
     }
   }
@@ -479,12 +480,12 @@ class AuthService {
 
   async sendVerificationEmail(user) {
     // Implementation would use email service
-    console.log(`Sending verification email to ${user.email}`);
+    logger.info(`Sending verification email to ${user.email}`);
   }
 
   async sendSuspiciousLoginAlert(user, deviceInfo) {
     // Implementation would use email service
-    console.log(`Sending suspicious login alert to ${user.email}`);
+    logger.info(`Sending suspicious login alert to ${user.email}`);
   }
 }
 

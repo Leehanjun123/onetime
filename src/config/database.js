@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const redis = require('redis');
+const { logger } = require('../utils/logger');
 
 // Prisma Client 초기화
 const prisma = new PrismaClient({
@@ -17,16 +18,16 @@ const initRedis = async () => {
       });
 
       redisClient.on('error', (err) => {
-        console.error('Redis 연결 오류:', err);
+        logger.error('Redis 연결 오류:', err);
       });
 
       redisClient.on('connect', () => {
-        console.log('✅ Redis 연결 성공');
+        logger.info('✅ Redis 연결 성공');
       });
 
       await redisClient.connect();
     } catch (error) {
-      console.error('Redis 초기화 실패:', error);
+      logger.error('Redis 초기화 실패:', error);
     }
   }
   return redisClient;
@@ -37,19 +38,19 @@ const testConnection = async () => {
   try {
     // PostgreSQL 연결 테스트
     await prisma.$connect();
-    console.log('✅ PostgreSQL 연결 성공');
+    logger.info('✅ PostgreSQL 연결 성공');
     
     // Redis는 선택적으로 연결 (실패해도 서버는 계속 실행)
     try {
       await initRedis();
     } catch (redisError) {
-      console.warn('⚠️ Redis 연결 실패 (선택적 서비스):', redisError.message);
+      logger.warn('⚠️ Redis 연결 실패 (선택적 서비스):', redisError.message);
     }
     
     return { success: true };
   } catch (error) {
-    console.error('❌ PostgreSQL 연결 실패:', error);
-    console.warn('⚠️ 데이터베이스 없이 기본 API만 제공합니다.');
+    logger.error('❌ PostgreSQL 연결 실패:', error);
+    logger.warn('⚠️ 데이터베이스 없이 기본 API만 제공합니다.');
     return { success: false, error };
   }
 };
@@ -61,9 +62,9 @@ const disconnect = async () => {
     if (redisClient) {
       await redisClient.quit();
     }
-    console.log('🔌 데이터베이스 연결 해제 완료');
+    logger.info('🔌 데이터베이스 연결 해제 완료');
   } catch (error) {
-    console.error('데이터베이스 연결 해제 오류:', error);
+    logger.error('데이터베이스 연결 해제 오류:', error);
   }
 };
 

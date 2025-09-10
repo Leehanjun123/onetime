@@ -51,7 +51,7 @@ class Logger {
     const resetColor = '\x1b[0m';
     const color = colors[level] || resetColor;
     
-    console.log(`${color}[${level.toUpperCase()}]${resetColor} ${message}`);
+    logger.info(`${color}[${level.toUpperCase()}]${resetColor} ${message}`);
     
     // Write to file in production
     if (process.env.NODE_ENV === 'production') {
@@ -211,7 +211,7 @@ class Logger {
   // Alert administrators
   alertAdmins(event, details) {
     // Implement admin alerting (email, SMS, Slack, etc.)
-    console.error(`🚨 ADMIN ALERT: ${event}`, details);
+    logger.error(`🚨 ADMIN ALERT: ${event}`, details);
   }
 
   // Get log statistics

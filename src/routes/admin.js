@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const adminService = require('../services/admin');
 const { authenticateToken } = require('../middlewares/auth');
+const { adminValidations } = require('../middlewares/validation');
 const { logger } = require('../utils/logger');
 
 // 관리자 권한 체크 미들웨어
@@ -15,7 +16,7 @@ const requireAdmin = (req, res, next) => {
 };
 
 // 대시보드 통계
-router.get('/dashboard', authenticateToken, requireAdmin, async (req, res) => {
+router.get('/dashboard', authenticateToken, requireAdmin, adminValidations.dashboard, async (req, res) => {
   try {
     const { period = 'week' } = req.query;
     
@@ -34,7 +35,7 @@ router.get('/dashboard', authenticateToken, requireAdmin, async (req, res) => {
 });
 
 // 사용자 목록 조회
-router.get('/users', authenticateToken, requireAdmin, async (req, res) => {
+router.get('/users', authenticateToken, requireAdmin, adminValidations.users, async (req, res) => {
   try {
     const {
       page = 1,
@@ -70,7 +71,7 @@ router.get('/users', authenticateToken, requireAdmin, async (req, res) => {
 });
 
 // 사용자 상세 조회
-router.get('/users/:userId', authenticateToken, requireAdmin, async (req, res) => {
+router.get('/users/:userId', authenticateToken, requireAdmin, adminValidations.userDetail, async (req, res) => {
   try {
     const { userId } = req.params;
     
@@ -89,7 +90,7 @@ router.get('/users/:userId', authenticateToken, requireAdmin, async (req, res) =
 });
 
 // 사용자 상태 변경
-router.patch('/users/:userId/status', authenticateToken, requireAdmin, async (req, res) => {
+router.patch('/users/:userId/status', authenticateToken, requireAdmin, adminValidations.userStatusUpdate, async (req, res) => {
   try {
     const { userId } = req.params;
     const { verified, isActive } = req.body;
@@ -114,7 +115,7 @@ router.patch('/users/:userId/status', authenticateToken, requireAdmin, async (re
 });
 
 // 일자리 목록 조회
-router.get('/jobs', authenticateToken, requireAdmin, async (req, res) => {
+router.get('/jobs', authenticateToken, requireAdmin, adminValidations.jobs, async (req, res) => {
   try {
     const {
       page = 1,
@@ -152,7 +153,7 @@ router.get('/jobs', authenticateToken, requireAdmin, async (req, res) => {
 });
 
 // 일자리 상태 변경
-router.patch('/jobs/:jobId/status', authenticateToken, requireAdmin, async (req, res) => {
+router.patch('/jobs/:jobId/status', authenticateToken, requireAdmin, adminValidations.jobStatusUpdate, async (req, res) => {
   try {
     const { jobId } = req.params;
     const { status } = req.body;
@@ -177,7 +178,7 @@ router.patch('/jobs/:jobId/status', authenticateToken, requireAdmin, async (req,
 });
 
 // 결제 목록 조회
-router.get('/payments', authenticateToken, requireAdmin, async (req, res) => {
+router.get('/payments', authenticateToken, requireAdmin, adminValidations.payments, async (req, res) => {
   try {
     const {
       page = 1,
@@ -214,7 +215,7 @@ router.get('/payments', authenticateToken, requireAdmin, async (req, res) => {
 });
 
 // 정산 목록 조회
-router.get('/settlements', authenticateToken, requireAdmin, async (req, res) => {
+router.get('/settlements', authenticateToken, requireAdmin, adminValidations.settlements, async (req, res) => {
   try {
     const {
       page = 1,
@@ -246,7 +247,7 @@ router.get('/settlements', authenticateToken, requireAdmin, async (req, res) => 
 });
 
 // 정산 처리
-router.post('/settlements/:settlementId/process', authenticateToken, requireAdmin, async (req, res) => {
+router.post('/settlements/:settlementId/process', authenticateToken, requireAdmin, adminValidations.settlementProcess, async (req, res) => {
   try {
     const { settlementId } = req.params;
 
@@ -266,7 +267,7 @@ router.post('/settlements/:settlementId/process', authenticateToken, requireAdmi
 });
 
 // 시스템 공지 발송
-router.post('/notifications/broadcast', authenticateToken, requireAdmin, async (req, res) => {
+router.post('/notifications/broadcast', authenticateToken, requireAdmin, adminValidations.broadcastNotification, async (req, res) => {
   try {
     const { title, message, userFilter = {} } = req.body;
 
@@ -293,7 +294,7 @@ router.post('/notifications/broadcast', authenticateToken, requireAdmin, async (
 });
 
 // 통계 내보내기 (CSV)
-router.get('/export/:type', authenticateToken, requireAdmin, async (req, res) => {
+router.get('/export/:type', authenticateToken, requireAdmin, adminValidations.export, async (req, res) => {
   try {
     const { type } = req.params;
     const { startDate, endDate } = req.query;

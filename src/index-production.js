@@ -28,7 +28,7 @@ try {
     log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
   });
 } catch (error) {
-  console.warn('⚠️ Prisma not available, running in limited mode');
+  logger.warn('⚠️ Prisma not available, running in limited mode');
   // Mock prisma for development without database
   prisma = {
     user: {
@@ -280,7 +280,7 @@ app.post('/api/v1/auth/register', async (req, res) => {
       data: { user, token }
     });
   } catch (error) {
-    console.error('Registration error:', error);
+    logger.error('Registration error:', error);
     res.status(500).json({ 
       error: 'Registration failed',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
@@ -328,7 +328,7 @@ app.post('/api/v1/auth/login', async (req, res) => {
       data: { user: userWithoutPassword, token }
     });
   } catch (error) {
-    console.error('Login error:', error);
+    logger.error('Login error:', error);
     res.status(500).json({ 
       error: 'Login failed',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
@@ -357,7 +357,7 @@ app.get('/api/v1/auth/profile', authenticateToken, async (req, res) => {
     
     res.json({ data: user });
   } catch (error) {
-    console.error('Profile fetch error:', error);
+    logger.error('Profile fetch error:', error);
     res.status(500).json({ error: 'Failed to fetch profile' });
   }
 });
@@ -397,7 +397,7 @@ app.get('/api/v1/jobs', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Jobs fetch error:', error);
+    logger.error('Jobs fetch error:', error);
     res.status(500).json({ error: 'Failed to fetch jobs' });
   }
 });
@@ -415,14 +415,14 @@ setupErrorHandler(app);
 
 // Graceful shutdown
 const gracefulShutdown = async () => {
-  console.log('Shutting down gracefully...');
+  logger.info('Shutting down gracefully...');
   
   server.close(() => {
-    console.log('HTTP server closed');
+    logger.info('HTTP server closed');
   });
   
   await prisma.$disconnect();
-  console.log('Database connection closed');
+  logger.info('Database connection closed');
   
   process.exit(0);
 };

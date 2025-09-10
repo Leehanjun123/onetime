@@ -1,6 +1,7 @@
 const express = require('express');
 const { prisma } = require('../config/database');
 const { authenticateToken } = require('../middlewares/auth');
+const { logger } = require('../utils/logger');
 const router = express.Router();
 
 // 일자리 저장하기
@@ -63,7 +64,7 @@ router.post('/jobs/:jobId', authenticateToken, async (req, res) => {
       data: saved
     });
   } catch (error) {
-    console.error('일자리 저장 오류:', error);
+    logger.error('일자리 저장 오류:', error);
     res.status(500).json({ 
       message: '일자리 저장에 실패했습니다',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
@@ -94,7 +95,7 @@ router.delete('/jobs/:jobId', authenticateToken, async (req, res) => {
       message: '저장이 취소되었습니다'
     });
   } catch (error) {
-    console.error('저장 취소 오류:', error);
+    logger.error('저장 취소 오류:', error);
     res.status(500).json({ 
       message: '저장 취소에 실패했습니다',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
@@ -160,7 +161,7 @@ router.get('/jobs', authenticateToken, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('저장 목록 조회 오류:', error);
+    logger.error('저장 목록 조회 오류:', error);
     res.status(500).json({ 
       message: '저장 목록 조회에 실패했습니다',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
@@ -187,7 +188,7 @@ router.get('/jobs/:jobId/check', authenticateToken, async (req, res) => {
       saved: !!saved
     });
   } catch (error) {
-    console.error('저장 확인 오류:', error);
+    logger.error('저장 확인 오류:', error);
     res.status(500).json({ 
       message: '저장 확인에 실패했습니다',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
@@ -260,7 +261,7 @@ router.post('/companies/:companyId', authenticateToken, async (req, res) => {
       data: saved
     });
   } catch (error) {
-    console.error('회사 저장 오류:', error);
+    logger.error('회사 저장 오류:', error);
     res.status(500).json({ 
       message: '회사 저장에 실패했습니다',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
@@ -311,7 +312,7 @@ router.get('/companies', authenticateToken, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('저장된 회사 조회 오류:', error);
+    logger.error('저장된 회사 조회 오류:', error);
     res.status(500).json({ 
       message: '저장된 회사 조회에 실패했습니다',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
