@@ -3,6 +3,8 @@ const { prisma } = require('../config/database');
 const { generateToken, verifyToken } = require('../utils/jwt');
 const { hashPassword, comparePassword, validatePassword } = require('../utils/password');
 const { authenticateToken, optionalAuth } = require('../middlewares/auth');
+const emailService = require('../services/email');
+const crypto = require('crypto');
 const router = express.Router();
 
 // 이메일/전화번호로 회원가입
@@ -90,8 +92,13 @@ router.post('/register', async (req, res) => {
       userType: user.userType
     });
 
+    // 이메일 인증 메일 발송 (비동기로 처리)
+    emailService.sendVerificationEmail(user).catch(err => {
+      console.error('Verification email failed:', err);
+    });
+
     res.status(201).json({
-      message: '회원가입이 완료되었습니다',
+      message: '회원가입이 완료되었습니다. 이메일 인증을 진행해주세요.',
       data: {
         user,
         token
@@ -376,6 +383,187 @@ router.put('/change-password', authenticateToken, async (req, res) => {
     console.error('비밀번호 변경 오류:', error);
     res.status(500).json({ 
       message: '비밀번호 변경에 실패했습니다',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// 이메일 인증
+router.post('/verify-email', async (req, res) => {
+  try {
+    const { token } = req.body;
+
+    if (!token) {
+      return res.status(400).json({ 
+        message: '인증 토큰이 필요합니다' 
+      });
+    }
+
+    // 토큰 검증
+    const verificationToken = await emailService.verifyToken(token, 'EMAIL_VERIFY');
+    
+    if (!verificationToken) {
+      return res.status(400).json({ 
+        message: '유효하지 않거나 만료된 토큰입니다' 
+      });
+    }
+
+    // 사용자 이메일 인증 상태 업데이트
+    await prisma.user.update({
+      where: { id: verificationToken.userId },
+      data: { verified: true }
+    });
+
+    // 토큰 사용 처리
+    await prisma.verificationToken.update({
+      where: { id: verificationToken.id },
+      data: {
+        used: true,
+        usedAt: new Date()
+      }
+    });
+
+    // 환영 이메일 발송
+    emailService.sendWelcomeEmail(verificationToken.user).catch(err => {
+      console.error('Welcome email failed:', err);
+    });
+
+    res.json({ 
+      message: '이메일 인증이 완료되었습니다' 
+    });
+  } catch (error) {
+    console.error('이메일 인증 오류:', error);
+    res.status(500).json({ 
+      message: '이메일 인증에 실패했습니다',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// 인증 이메일 재전송
+router.post('/resend-verification', authenticateToken, async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id }
+    });
+
+    if (!user) {
+      return res.status(404).json({ 
+        message: '사용자를 찾을 수 없습니다' 
+      });
+    }
+
+    if (user.verified) {
+      return res.status(400).json({ 
+        message: '이미 인증된 이메일입니다' 
+      });
+    }
+
+    // 새 인증 이메일 발송
+    await emailService.sendVerificationEmail(user);
+
+    res.json({ 
+      message: '인증 이메일이 재전송되었습니다' 
+    });
+  } catch (error) {
+    console.error('인증 이메일 재전송 오류:', error);
+    res.status(500).json({ 
+      message: '인증 이메일 재전송에 실패했습니다',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// 비밀번호 재설정 요청
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ 
+        message: '이메일을 입력해주세요' 
+      });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email }
+    });
+
+    if (!user) {
+      // 보안상 사용자 존재 여부를 노출하지 않음
+      return res.json({ 
+        message: '해당 이메일로 비밀번호 재설정 링크를 전송했습니다' 
+      });
+    }
+
+    // 비밀번호 재설정 이메일 발송
+    await emailService.sendPasswordResetEmail(user);
+
+    res.json({ 
+      message: '해당 이메일로 비밀번호 재설정 링크를 전송했습니다' 
+    });
+  } catch (error) {
+    console.error('비밀번호 재설정 요청 오류:', error);
+    res.status(500).json({ 
+      message: '비밀번호 재설정 요청에 실패했습니다',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// 비밀번호 재설정
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { token, password } = req.body;
+
+    if (!token || !password) {
+      return res.status(400).json({ 
+        message: '필수 정보가 누락되었습니다' 
+      });
+    }
+
+    // 비밀번호 강도 검증
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.isValid) {
+      return res.status(400).json({ 
+        message: '비밀번호가 규칙에 맞지 않습니다',
+        errors: passwordValidation.errors
+      });
+    }
+
+    // 토큰 검증
+    const verificationToken = await emailService.verifyToken(token, 'PASSWORD_RESET');
+    
+    if (!verificationToken) {
+      return res.status(400).json({ 
+        message: '유효하지 않거나 만료된 토큰입니다' 
+      });
+    }
+
+    // 비밀번호 해싱 및 업데이트
+    const hashedPassword = await hashPassword(password);
+    
+    await prisma.user.update({
+      where: { id: verificationToken.userId },
+      data: { password: hashedPassword }
+    });
+
+    // 토큰 사용 처리
+    await prisma.verificationToken.update({
+      where: { id: verificationToken.id },
+      data: {
+        used: true,
+        usedAt: new Date()
+      }
+    });
+
+    res.json({ 
+      message: '비밀번호가 성공적으로 재설정되었습니다' 
+    });
+  } catch (error) {
+    console.error('비밀번호 재설정 오류:', error);
+    res.status(500).json({ 
+      message: '비밀번호 재설정에 실패했습니다',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }

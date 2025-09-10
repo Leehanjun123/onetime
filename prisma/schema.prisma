@@ -42,6 +42,8 @@ model User {
   payments     Payment[]
   settlements  Settlement[]
   notifications Notification[]
+  verificationTokens VerificationToken[]
+  portfolioFiles PortfolioFile[]
 
   @@map("users")
 }
@@ -299,6 +301,38 @@ model Notification {
   @@map("notifications")
 }
 
+// 인증 토큰 모델
+model VerificationToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  type      TokenType
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  used      Boolean  @default(false)
+  usedAt    DateTime?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([token])
+  @@index([userId, type])
+  @@map("verification_tokens")
+}
+
+// 포트폴리오 파일 모델
+model PortfolioFile {
+  id        String   @id @default(cuid())
+  fileName  String
+  filePath  String
+  fileType  String
+  fileSize  Int
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("portfolio_files")
+}
+
 // Enums
 enum PaymentStatus {
   PENDING
@@ -340,4 +374,10 @@ enum NotificationType {
   JOB_SUGGESTION
   NEW_APPLICATION
   APPLICATION_CANCELLED
+}
+
+enum TokenType {
+  EMAIL_VERIFY
+  PASSWORD_RESET
+  PHONE_VERIFY
 }

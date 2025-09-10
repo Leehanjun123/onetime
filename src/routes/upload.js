@@ -1,291 +1,176 @@
 const express = require('express');
-const { uploadConfigs, handleUploadError, getFileUrl, deleteFile } = require('../middlewares/upload');
-const { authenticateToken } = require('../middlewares/auth');
-const { prisma } = require('../config/database');
 const router = express.Router();
+const uploadService = require('../services/upload');
+const { authenticateToken } = require('../middlewares/auth');
+const redis = require('../config/redis');
 
-// 사용자 아바타 업로드
-router.post('/avatar', authenticateToken, (req, res, next) => {
-  uploadConfigs.avatar(req, res, (err) => {
-    handleUploadError(err, req, res, next);
-  });
-}, async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({
-        message: '파일이 선택되지 않았습니다'
+// 프로필 이미지 업로드
+router.post('/profile-image', 
+  authenticateToken,
+  uploadService.getProfileImageUploader().single('image'),
+  async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({
+          message: '이미지 파일을 선택해주세요'
+        });
+      }
+
+      const result = await uploadService.uploadProfileImage(req.user.id, req.file);
+
+      // 사용자 캐시 무효화
+      await redis.invalidateUserCache(req.user.id);
+
+      res.json({
+        message: '프로필 이미지가 업로드되었습니다',
+        data: result
+      });
+    } catch (error) {
+      console.error('프로필 이미지 업로드 오류:', error);
+      res.status(500).json({
+        message: '프로필 이미지 업로드에 실패했습니다',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
     }
-
-    // 파일 URL 생성
-    const avatarUrl = getFileUrl(req, req.file.filename);
-
-    // 기존 아바타 파일 삭제
-    const currentUser = await prisma.user.findUnique({
-      where: { id: req.user.id },
-      select: { avatar: true }
-    });
-
-    if (currentUser?.avatar) {
-      const oldFilename = currentUser.avatar.split('/').pop();
-      const oldFilePath = `uploads/avatars/${oldFilename}`;
-      deleteFile(oldFilePath);
-    }
-
-    // 사용자 아바타 업데이트
-    const updatedUser = await prisma.user.update({
-      where: { id: req.user.id },
-      data: { avatar: avatarUrl },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        avatar: true,
-        userType: true
-      }
-    });
-
-    res.json({
-      message: '아바타가 성공적으로 업로드되었습니다',
-      user: updatedUser,
-      fileInfo: {
-        filename: req.file.filename,
-        originalname: req.file.originalname,
-        size: req.file.size,
-        url: avatarUrl
-      }
-    });
-  } catch (error) {
-    console.error('아바타 업로드 오류:', error);
-    res.status(500).json({
-      message: '아바타 업로드에 실패했습니다',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
   }
-});
+);
 
-// 작업 사진 업로드 (단일)
-router.post('/work-photo', authenticateToken, (req, res, next) => {
-  uploadConfigs.workPhoto(req, res, (err) => {
-    handleUploadError(err, req, res, next);
-  });
-}, async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({
-        message: '파일이 선택되지 않았습니다'
-      });
-    }
+// 포트폴리오 파일 업로드
+router.post('/portfolio',
+  authenticateToken,
+  uploadService.getPortfolioUploader().array('files', 10),
+  async (req, res) => {
+    try {
+      if (!req.files || req.files.length === 0) {
+        return res.status(400).json({
+          message: '업로드할 파일을 선택해주세요'
+        });
+      }
 
-    const { sessionId } = req.body;
-    
-    if (!sessionId) {
-      return res.status(400).json({
-        message: '작업 세션 ID가 필요합니다'
-      });
-    }
-
-    // 작업 세션 확인 및 권한 검증
-    const workSession = await prisma.workSession.findUnique({
-      where: { id: sessionId }
-    });
-
-    if (!workSession) {
-      return res.status(404).json({
-        message: '작업 세션을 찾을 수 없습니다'
-      });
-    }
-
-    if (workSession.workerId !== req.user.id) {
-      return res.status(403).json({
-        message: '이 작업 세션에 사진을 업로드할 권한이 없습니다'
-      });
-    }
-
-    const photoUrl = getFileUrl(req, req.file.filename);
-
-    // 작업 세션에 사진 추가
-    const updatedSession = await prisma.workSession.update({
-      where: { id: sessionId },
-      data: {
-        photos: {
-          push: photoUrl
+      // 스토리지 사용량 확인
+      const storageUsage = await uploadService.getUserStorageUsage(req.user.id);
+      const newFilesSize = req.files.reduce((sum, file) => sum + file.size, 0);
+      
+      if (storageUsage.used + newFilesSize > storageUsage.max) {
+        // 업로드된 파일 삭제
+        for (const file of req.files) {
+          await uploadService.deleteFile(file.path);
         }
-      },
-      select: {
-        id: true,
-        photos: true,
-        status: true
+        
+        return res.status(400).json({
+          message: '저장 공간이 부족합니다',
+          data: {
+            currentUsage: storageUsage.percentage.toFixed(2) + '%',
+            maxStorage: Math.floor(storageUsage.max / 1024 / 1024) + 'MB'
+          }
+        });
       }
+
+      const result = await uploadService.uploadPortfolioFiles(req.user.id, req.files);
+
+      res.json({
+        message: '포트폴리오 파일이 업로드되었습니다',
+        data: result
+      });
+    } catch (error) {
+      console.error('포트폴리오 업로드 오류:', error);
+      res.status(500).json({
+        message: '포트폴리오 업로드에 실패했습니다',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+  }
+);
+
+// 포트폴리오 파일 목록 조회
+router.get('/portfolio', authenticateToken, async (req, res) => {
+  try {
+    const { prisma } = require('../config/database');
+    
+    const files = await prisma.portfolioFile.findMany({
+      where: { userId: req.user.id },
+      orderBy: { createdAt: 'desc' }
     });
+
+    const storageUsage = await uploadService.getUserStorageUsage(req.user.id);
 
     res.json({
-      message: '작업 사진이 성공적으로 업로드되었습니다',
-      workSession: updatedSession,
-      fileInfo: {
-        filename: req.file.filename,
-        originalname: req.file.originalname,
-        size: req.file.size,
-        url: photoUrl
-      }
-    });
-  } catch (error) {
-    console.error('작업 사진 업로드 오류:', error);
-    res.status(500).json({
-      message: '작업 사진 업로드에 실패했습니다',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
-  }
-});
-
-// 작업 사진 업로드 (다중)
-router.post('/work-photos', authenticateToken, (req, res, next) => {
-  uploadConfigs.workPhotos(req, res, (err) => {
-    handleUploadError(err, req, res, next);
-  });
-}, async (req, res) => {
-  try {
-    if (!req.files || req.files.length === 0) {
-      return res.status(400).json({
-        message: '파일이 선택되지 않았습니다'
-      });
-    }
-
-    const { sessionId } = req.body;
-    
-    if (!sessionId) {
-      return res.status(400).json({
-        message: '작업 세션 ID가 필요합니다'
-      });
-    }
-
-    // 작업 세션 확인 및 권한 검증
-    const workSession = await prisma.workSession.findUnique({
-      where: { id: sessionId }
-    });
-
-    if (!workSession) {
-      return res.status(404).json({
-        message: '작업 세션을 찾을 수 없습니다'
-      });
-    }
-
-    if (workSession.workerId !== req.user.id) {
-      return res.status(403).json({
-        message: '이 작업 세션에 사진을 업로드할 권한이 없습니다'
-      });
-    }
-
-    // 모든 파일 URL 생성
-    const photoUrls = req.files.map(file => getFileUrl(req, file.filename));
-
-    // 작업 세션에 사진들 추가
-    const updatedSession = await prisma.workSession.update({
-      where: { id: sessionId },
       data: {
-        photos: {
-          push: photoUrls
+        files,
+        storage: {
+          used: storageUsage.used,
+          max: storageUsage.max,
+          percentage: storageUsage.percentage.toFixed(2)
         }
-      },
-      select: {
-        id: true,
-        photos: true,
-        status: true
       }
     });
-
-    res.json({
-      message: `${req.files.length}개의 작업 사진이 성공적으로 업로드되었습니다`,
-      workSession: updatedSession,
-      filesInfo: req.files.map(file => ({
-        filename: file.filename,
-        originalname: file.originalname,
-        size: file.size,
-        url: getFileUrl(req, file.filename)
-      }))
-    });
   } catch (error) {
-    console.error('작업 사진 업로드 오류:', error);
+    console.error('포트폴리오 조회 오류:', error);
     res.status(500).json({
-      message: '작업 사진 업로드에 실패했습니다',
+      message: '포트폴리오 조회에 실패했습니다',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 });
 
-// 문서 파일 업로드
-router.post('/document', authenticateToken, (req, res, next) => {
-  uploadConfigs.document(req, res, (err) => {
-    handleUploadError(err, req, res, next);
-  });
-}, async (req, res) => {
+// 포트폴리오 파일 삭제
+router.delete('/portfolio/:fileId', authenticateToken, async (req, res) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({
-        message: '파일이 선택되지 않았습니다'
-      });
-    }
+    const { prisma } = require('../config/database');
+    const { fileId } = req.params;
 
-    const documentUrl = getFileUrl(req, req.file.filename);
-
-    res.json({
-      message: '문서가 성공적으로 업로드되었습니다',
-      fileInfo: {
-        filename: req.file.filename,
-        originalname: req.file.originalname,
-        size: req.file.size,
-        url: documentUrl
+    // 파일 소유권 확인
+    const file = await prisma.portfolioFile.findFirst({
+      where: {
+        id: fileId,
+        userId: req.user.id
       }
     });
-  } catch (error) {
-    console.error('문서 업로드 오류:', error);
-    res.status(500).json({
-      message: '문서 업로드에 실패했습니다',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
-  }
-});
 
-// 업로드된 파일 삭제
-router.delete('/file/:filename', authenticateToken, async (req, res) => {
-  try {
-    const { filename } = req.params;
-    const { type = 'others' } = req.query;
-
-    const validTypes = ['avatars', 'work-photos', 'documents', 'others'];
-    if (!validTypes.includes(type)) {
-      return res.status(400).json({
-        message: '유효하지 않은 파일 타입입니다'
-      });
-    }
-
-    const filePath = `uploads/${type}/${filename}`;
-    
-    // 파일 삭제
-    const deleted = deleteFile(filePath);
-    
-    if (!deleted) {
+    if (!file) {
       return res.status(404).json({
         message: '파일을 찾을 수 없습니다'
       });
     }
 
-    // 아바타인 경우 사용자 정보에서도 제거
-    if (type === 'avatars') {
-      await prisma.user.update({
-        where: { id: req.user.id },
-        data: { avatar: null }
-      });
-    }
+    // 파일 시스템에서 삭제
+    await uploadService.deleteFile(file.filePath);
+
+    // DB에서 삭제
+    await prisma.portfolioFile.delete({
+      where: { id: fileId }
+    });
 
     res.json({
-      message: '파일이 성공적으로 삭제되었습니다',
-      filename
+      message: '파일이 삭제되었습니다'
     });
   } catch (error) {
     console.error('파일 삭제 오류:', error);
     res.status(500).json({
       message: '파일 삭제에 실패했습니다',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// 스토리지 사용량 조회
+router.get('/storage-usage', authenticateToken, async (req, res) => {
+  try {
+    const usage = await uploadService.getUserStorageUsage(req.user.id);
+
+    res.json({
+      data: {
+        used: usage.used,
+        max: usage.max,
+        percentage: usage.percentage.toFixed(2),
+        usedMB: (usage.used / 1024 / 1024).toFixed(2),
+        maxMB: (usage.max / 1024 / 1024).toFixed(2)
+      }
+    });
+  } catch (error) {
+    console.error('스토리지 사용량 조회 오류:', error);
+    res.status(500).json({
+      message: '스토리지 사용량 조회에 실패했습니다',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
