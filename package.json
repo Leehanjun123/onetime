@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "build": "tsc",
+    "build": "npx prisma generate && npx prisma migrate deploy && tsc",
+    "postbuild": "npx prisma migrate deploy",
     "postinstall": "npx prisma generate || echo 'Prisma generation skipped'",
     "db:migrate": "npx prisma migrate deploy",
     "db:push": "npx prisma db push",
