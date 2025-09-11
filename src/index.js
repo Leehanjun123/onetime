@@ -75,6 +75,51 @@ app.get('/db-status', async (req, res) => {
   }
 });
 
+// Manual migration trigger (emergency use only)
+app.post('/deploy-db', async (req, res) => {
+  const { secret } = req.body;
+  
+  // Simple security check
+  if (secret !== process.env.JWT_SECRET) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  
+  try {
+    const { exec } = require('child_process');
+    const { promisify } = require('util');
+    const execAsync = promisify(exec);
+    
+    console.log('🚀 Starting manual database migration...');
+    
+    // Run migrations
+    const { stdout, stderr } = await execAsync('npx prisma migrate deploy');
+    
+    console.log('Migration output:', stdout);
+    if (stderr) console.error('Migration errors:', stderr);
+    
+    // Test the connection after migration
+    await prisma.$connect();
+    const userCount = await prisma.user.count();
+    
+    res.json({
+      status: 'SUCCESS',
+      message: 'Database migration completed',
+      output: stdout,
+      userCount,
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('Migration failed:', error);
+    res.status(500).json({
+      status: 'ERROR',
+      message: 'Database migration failed',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // 404 핸들러
 app.use((req, res) => {
   res.status(404).json({ error: 'Not Found' });
