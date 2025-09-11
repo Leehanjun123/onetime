@@ -2,10 +2,32 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const { PrismaClient } = require('@prisma/client');
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Initialize Prisma client
+const prisma = new PrismaClient();
+
+// Test database connection on startup
+async function testDatabaseConnection() {
+  try {
+    await prisma.$connect();
+    console.log('✅ Database connected successfully');
+    
+    // Test if tables exist
+    const userCount = await prisma.user.count();
+    console.log(`📊 Database schema is ready. Users: ${userCount}`);
+    
+    return true;
+  } catch (error) {
+    console.error('❌ Database connection failed:', error.message);
+    console.log('🔧 Database may need migration deployment');
+    return false;
+  }
+}
 
 // 기본 미들웨어
 app.use(helmet());
@@ -32,6 +54,27 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Database status endpoint
+app.get('/db-status', async (req, res) => {
+  try {
+    await prisma.$connect();
+    const userCount = await prisma.user.count();
+    res.json({
+      status: 'OK',
+      message: 'Database connected',
+      userCount,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'ERROR',
+      message: 'Database connection failed',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // 404 핸들러
 app.use((req, res) => {
   res.status(404).json({ error: 'Not Found' });
@@ -44,9 +87,17 @@ app.use((error, req, res, next) => {
 });
 
 // 서버 시작
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📊 Health check: http://localhost:${PORT}/health`);
+  
+  // Test database connection
+  const dbConnected = await testDatabaseConnection();
+  if (dbConnected) {
+    console.log('🎉 Application is ready with database connection');
+  } else {
+    console.log('⚠️  Application running but database connection failed');
+  }
 });
 
 module.exports = app;
