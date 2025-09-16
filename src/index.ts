@@ -23,6 +23,7 @@ import jobRoutes from './routes/jobs';
 import userRoutes from './routes/users';
 import matchingRoutes from './routes/matching';
 import securityRoutes from './routes/security';
+import monitoringRoutes from './routes/monitoring';
 import { 
   comprehensiveSecurityMiddleware,
   generalRateLimit,
@@ -93,44 +94,16 @@ app.use('/api/jobs', jobRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/matching', matchingRoutes);
 app.use('/api/security', securityRoutes);
+app.use('/api/monitoring', monitoringRoutes);
 
-// Health check endpoint with enhanced information
-app.get('/health', async (req: Request, res: Response) => {
-  const dbStatus = await testDatabaseConnection();
-  
-  res.json({ 
-    status: 'OK',
-    timestamp: new Date().toISOString(),
-    version: '3.0.0',
-    environment: process.env.NODE_ENV || 'development',
-    database: dbStatus.connected ? 'connected' : 'disconnected',
-    uptime: process.uptime(),
-  });
+// Legacy health check endpoint (redirects to new monitoring system)
+app.get('/health', (req: Request, res: Response) => {
+  res.redirect('/api/monitoring/health');
 });
 
-// Performance metrics endpoint
+// Legacy metrics endpoint (redirects to new monitoring system)
 app.get('/metrics', (req: Request, res: Response) => {
-  const memoryUsage = process.memoryUsage();
-  const cpuUsage = process.cpuUsage();
-  
-  res.json({
-    ...healthMetrics,
-    memory: {
-      rss: Math.round(memoryUsage.rss / 1024 / 1024) + 'MB',
-      heapTotal: Math.round(memoryUsage.heapTotal / 1024 / 1024) + 'MB',
-      heapUsed: Math.round(memoryUsage.heapUsed / 1024 / 1024) + 'MB',
-      external: Math.round(memoryUsage.external / 1024 / 1024) + 'MB'
-    },
-    cpu: {
-      user: Math.round(cpuUsage.user / 1000) + 'ms',
-      system: Math.round(cpuUsage.system / 1000) + 'ms'
-    },
-    nodejs: {
-      version: process.version,
-      platform: process.platform,
-      arch: process.arch
-    }
-  });
+  res.redirect('/api/monitoring/metrics');
 });
 
 // Database status endpoint
