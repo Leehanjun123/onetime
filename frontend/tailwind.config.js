@@ -4,9 +4,8 @@ module.exports = {
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
+    './public/index.html',
   ],
-  // Optimize for production
-  mode: process.env.NODE_ENV === 'production' ? 'jit' : undefined,
   theme: {
     extend: {
       colors: {
@@ -33,20 +32,14 @@ module.exports = {
     },
   },
   plugins: [],
-  // Purge unused styles in production
-  purge: {
-    enabled: process.env.NODE_ENV === 'production',
-    content: [
-      './src/**/*.{js,ts,jsx,tsx}',
-      './public/index.html',
-    ],
-    options: {
-      safelist: [
-        'animate-pulse',
-        'animate-spin',
-        'bg-primary',
-        'text-primary',
-      ],
-    },
-  },
+  // Safelist for dynamic classes
+  safelist: [
+    'animate-pulse',
+    'animate-spin',
+    'bg-primary',
+    'text-primary',
+    'animate-fade-in',
+    'animate-slide-up',
+    'animate-pulse-slow'
+  ],
 }

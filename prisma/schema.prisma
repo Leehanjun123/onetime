@@ -65,6 +65,9 @@ model User {
   trustScore TrustScore?
   deviceFingerprints DeviceFingerprint[]
   sessionTokens SessionToken[]
+  workerProfile WorkerProfile?
+  jobMatches JobMatch[]
+  matchingPreferences MatchingPreferences?
 
   @@map("users")
 }
@@ -94,6 +97,7 @@ model Job {
   payments     Payment[]
   settlements  Settlement[]
   settlementItems SettlementItem[]
+  jobMatches   JobMatch[]
 
   @@map("jobs")
 }
@@ -749,4 +753,131 @@ model SessionToken {
   @@index([tokenId])
   @@index([expiresAt])
   @@map("session_tokens")
+}
+
+// AI 매칭 시스템 모델들
+model WorkerProfile {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  skills           String[] // 보유 기술/능력
+  experience       Int      @default(0) // 경력 년수
+  preferredLocations String[] // 선호 지역
+  preferredCategories JobCategory[] // 선호 업무 카테고리
+  availableHours   Json?    // 가능한 시간대 {mon: [9,18], tue: [9,18] ...}
+  minWage          Int?     // 최소 희망 시급
+  maxDistance      Int?     // 최대 이동 거리 (km)
+  workStyle        String?  // 업무 스타일 선호도
+  certifications   String[] // 자격증/인증
+  portfolioUrl     String?  // 포트폴리오 URL
+  bio              String?  // 자기소개
+  emergencyContact Json?    // 비상 연락처
+  transportation   String[] // 이용 가능한 교통수단
+  
+  // AI 매칭 점수 관련
+  matchingScore    Float    @default(0.0) // 전체 매칭 점수
+  reliabilityScore Float    @default(0.0) // 신뢰도 점수
+  skillScore       Float    @default(0.0) // 기술 점수
+  responseScore    Float    @default(0.0) // 응답성 점수
+  
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("worker_profiles")
+}
+
+model JobMatch {
+  id               String      @id @default(cuid())
+  jobId            String
+  workerId         String
+  matchScore       Float       // 0.0 ~ 1.0 매칭 점수
+  scoreBreakdown   Json        // 점수 세부 분석
+  distanceScore    Float       // 거리 점수
+  skillScore       Float       // 기술 점수  
+  scheduleScore    Float       // 스케줄 점수
+  wageScore        Float       // 급여 점수
+  experienceScore  Float       // 경험 점수
+  reliabilityScore Float       // 신뢰도 점수
+  preferenceScore  Float       // 선호도 점수
+  
+  status           MatchStatus @default(GENERATED)
+  viewedByWorker   Boolean     @default(false)
+  viewedByEmployer Boolean     @default(false)
+  appliedAt        DateTime?
+  rejectedAt       DateTime?
+  
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  
+  job              Job         @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  worker           User        @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  
+  @@unique([jobId, workerId])
+  @@index([jobId])
+  @@index([workerId])
+  @@index([matchScore])
+  @@index([status])
+  @@map("job_matches")
+}
+
+model MatchingHistory {
+  id          String   @id @default(cuid())
+  jobId       String
+  workerId    String
+  action      MatchAction
+  score       Float?
+  reason      String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  
+  @@index([jobId])
+  @@index([workerId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("matching_history")
+}
+
+model MatchingPreferences {
+  id                  String   @id @default(cuid())
+  userId              String   @unique
+  autoMatchEnabled    Boolean  @default(true)
+  maxMatchesPerDay    Int      @default(10)
+  minMatchScore       Float    @default(0.6)
+  preferredNotifyTime Json?    // 알림 선호 시간
+  enablePushNotify    Boolean  @default(true)
+  enableEmailNotify   Boolean  @default(false)
+  enableSmsNotify     Boolean  @default(false)
+  
+  // 가중치 설정 (사용자 커스터마이징)
+  distanceWeight      Float    @default(0.2)
+  skillWeight         Float    @default(0.25)
+  scheduleWeight      Float    @default(0.2)
+  wageWeight          Float    @default(0.15)
+  experienceWeight    Float    @default(0.1)
+  reliabilityWeight   Float    @default(0.1)
+  
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("matching_preferences")
+}
+
+enum MatchStatus {
+  GENERATED    // 생성됨
+  VIEWED       // 조회됨
+  APPLIED      // 지원함
+  REJECTED     // 거절됨
+  EXPIRED      // 만료됨
+}
+
+enum MatchAction {
+  GENERATED    // 매치 생성
+  VIEWED       // 매치 조회
+  APPLIED      // 지원
+  REJECTED     // 거절
+  EXPIRED      // 만료
+  FEEDBACK     // 피드백
 }

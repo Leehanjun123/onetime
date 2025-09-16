@@ -1,0 +1,14 @@
+# *
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /auth/
+Disallow: /_next/
+
+# Host
+Host: https://onetime-frontend.vercel.app
+
+# Sitemaps
+Sitemap: https://onetime-frontend.vercel.app/sitemap.xml
+Sitemap: https://onetime-frontend.vercel.app/server-sitemap.xml

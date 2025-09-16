@@ -75,13 +75,51 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko" className={inter.variable}>
+      <head>
+        {/* Performance optimization meta tags */}
+        <link rel="preconnect" href="https://onetime-production.up.railway.app" />
+        <link rel="dns-prefetch" href="https://onetime-production.up.railway.app" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        
+        {/* Critical resource hints */}
+        <link rel="preload" href="/fonts/inter-var.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+        
+        {/* Early performance monitoring */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.performanceStartTime = performance.now();
+              
+              // Early Core Web Vitals tracking
+              if ('PerformanceObserver' in window) {
+                try {
+                  const observer = new PerformanceObserver((list) => {
+                    list.getEntries().forEach((entry) => {
+                      if (entry.entryType === 'largest-contentful-paint') {
+                        console.log('🎯 LCP:', Math.round(entry.startTime) + 'ms');
+                      }
+                    });
+                  });
+                  observer.observe({entryTypes: ['largest-contentful-paint']});
+                } catch (e) {}
+              }
+            `
+          }}
+        />
+      </head>
+      
       <body className={`${inter.className} antialiased`}>
         <ReduxProvider>
           <Analytics />
           <WebVitals />
           <ServiceWorkerCleanup />
+          
+          {/* Critical above-the-fold content */}
           <SimpleNavigation />
           {children}
+          
+          {/* Non-critical components loaded after main content */}
           <WorkTimeTracker />
           <ChatList />
           <PushNotificationManager />
@@ -92,7 +130,33 @@ export default function RootLayout({
           <AdSenseScript />
           <MobileBottomAd />
           <AdSenseToggle />
+          <NotificationSystem />
         </ReduxProvider>
+        
+        {/* Performance tracking script at the end */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.addEventListener('load', () => {
+                const loadTime = performance.now() - window.performanceStartTime;
+                console.log('📊 Page Load Time:', Math.round(loadTime) + 'ms');
+                
+                // Track navigation timing
+                setTimeout(() => {
+                  const nav = performance.getEntriesByType('navigation')[0];
+                  if (nav) {
+                    console.log('🚀 Navigation Details:', {
+                      'DNS': Math.round(nav.domainLookupEnd - nav.domainLookupStart) + 'ms',
+                      'TCP': Math.round(nav.connectEnd - nav.connectStart) + 'ms',
+                      'TTFB': Math.round(nav.responseStart - nav.requestStart) + 'ms',
+                      'DOM': Math.round(nav.domContentLoadedEventEnd - nav.domContentLoadedEventStart) + 'ms'
+                    });
+                  }
+                }, 100);
+              });
+            `
+          }}
+        />
       </body>
     </html>
   );
