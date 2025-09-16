@@ -122,25 +122,25 @@ export default function JobsPage() {
     try {
       setLoading(true);
       
-      // 백엔드 API 호출
-      const response = await fetch('http://localhost:4000/api/v1/jobs');
+      // Railway 백엔드 API 호출
+      const response = await fetch('https://onetime-production.up.railway.app/api/jobs');
       const data = await response.json();
       
-      if (data.success && data.data?.jobs) {
-        // API 데이터를 컴포넌트 형식에 맞게 변환 (위치 정보 포함)
-        const formattedJobs: Job[] = data.data.jobs.map((job: any) => ({
+      if (data.jobs) {
+        // API 데이터를 컴포넌트 형식에 맞게 변환
+        const formattedJobs: Job[] = data.jobs.map((job: any) => ({
           id: job.id,
           title: job.title,
-          company: job.company?.name || '회사명',
+          company: job.employer?.name || '회사명',
           location: job.location,
-          hourlyPay: job.salaryMin || 100000,
-          workingHours: job.startTime && job.endTime ? `${job.startTime}-${job.endTime}` : '09:00-18:00',
+          hourlyPay: job.wage || 100000,
+          workingHours: `${job.workHours}시간`,
           workDays: ['월', '화', '수', '목', '금'],
           category: job.category || '기타',
           description: job.description || '',
-          requirements: job.requirements || [],
-          benefits: job.benefits || [],
-          urgent: job.isUrgent || false,
+          requirements: [],
+          benefits: ['당일 정산', '4대보험'],
+          urgent: job.urgent || false,
           postedAt: job.createdAt || new Date().toISOString(),
           deadlineAt: job.workDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
           contactInfo: {

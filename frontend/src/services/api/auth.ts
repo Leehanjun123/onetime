@@ -51,7 +51,14 @@ export const authAPI = {
     lastName?: string;
     phone?: string;
   }) => {
-    const response = await api.post('/auth/register', userData);
+    // Railway API expects { email, password, name, userType }
+    const railwayData = {
+      email: userData.email,
+      password: userData.password,
+      name: `${userData.firstName} ${userData.lastName || ''}`.trim(),
+      userType: 'WORKER' // default to worker, can be customized
+    };
+    const response = await api.post('/auth/register', railwayData);
     return response;
   },
 
@@ -67,11 +74,11 @@ export const authAPI = {
   // },
 
   getCurrentUser: async () => {
-    return api.get('/auth/profile');
+    return api.get('/users/profile');
   },
 
   updateProfile: async (data: any) => {
-    return api.put('/auth/profile', data);
+    return api.put('/users/profile', data);
   },
 
   changePassword: async (currentPassword: string, newPassword: string) => {

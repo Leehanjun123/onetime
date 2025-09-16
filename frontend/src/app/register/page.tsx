@@ -47,8 +47,8 @@ export default function RegisterPage() {
     setError('');
 
     try {
-      // 백엔드 API 호출 로직
-      const response = await fetch('https://onetime-production.up.railway.app/api/v1/auth/register', {
+      // Railway 백엔드 API 호출 로직
+      const response = await fetch('https://onetime-production.up.railway.app/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -56,10 +56,8 @@ export default function RegisterPage() {
         body: JSON.stringify({
           email: formData.email,
           password: formData.password,
-          firstName: formData.name.split(' ')[0] || formData.name,
-          lastName: formData.name.split(' ')[1] || '',
-          userType: userType === 'worker' ? 'JOB_SEEKER' : 'EMPLOYER',
-          phone: formData.phone,
+          name: formData.name,
+          userType: userType === 'worker' ? 'WORKER' : 'EMPLOYER',
         }),
       });
 
@@ -70,9 +68,9 @@ export default function RegisterPage() {
       const result = await response.json();
       
       // 회원가입 성공 시 자동 로그인
-      if (result.data?.token) {
-        localStorage.setItem('token', result.data.token);
-        localStorage.setItem('user', JSON.stringify(result.data.user));
+      if (result.token) {
+        localStorage.setItem('token', result.token);
+        localStorage.setItem('user', JSON.stringify(result.user));
         alert('회원가입이 완료되었습니다!');
         window.location.href = '/';
       } else {
