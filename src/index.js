@@ -77,7 +77,7 @@ app.get('/db-status', async (req, res) => {
 
 // Manual migration trigger (emergency use only)
 app.post('/deploy-db', async (req, res) => {
-  const { secret } = req.body;
+  const { secret, reset = false } = req.body;
   
   // Simple security check
   if (secret !== process.env.JWT_SECRET) {
@@ -89,13 +89,28 @@ app.post('/deploy-db', async (req, res) => {
     const { promisify } = require('util');
     const execAsync = promisify(exec);
     
-    console.log('🚀 Starting manual database migration...');
+    let output = '';
     
-    // Run migrations
-    const { stdout, stderr } = await execAsync('npx prisma migrate deploy');
-    
-    console.log('Migration output:', stdout);
-    if (stderr) console.error('Migration errors:', stderr);
+    if (reset) {
+      console.log('🔄 Resetting database schema...');
+      
+      // Push schema directly (creates tables without migration history)
+      const { stdout: pushOutput } = await execAsync('npx prisma db push --force-reset');
+      output += 'Schema push output:\n' + pushOutput + '\n\n';
+      
+    } else {
+      console.log('🚀 Starting manual database migration...');
+      
+      // Try normal migration first
+      try {
+        const { stdout } = await execAsync('npx prisma migrate deploy');
+        output += 'Migration output:\n' + stdout + '\n\n';
+      } catch (migrationError) {
+        console.log('⚠️ Migration failed, trying schema push...');
+        const { stdout: pushOutput } = await execAsync('npx prisma db push');
+        output += 'Schema push output:\n' + pushOutput + '\n\n';
+      }
+    }
     
     // Test the connection after migration
     await prisma.$connect();
@@ -103,17 +118,17 @@ app.post('/deploy-db', async (req, res) => {
     
     res.json({
       status: 'SUCCESS',
-      message: 'Database migration completed',
-      output: stdout,
+      message: 'Database setup completed',
+      output,
       userCount,
       timestamp: new Date().toISOString()
     });
     
   } catch (error) {
-    console.error('Migration failed:', error);
+    console.error('Database setup failed:', error);
     res.status(500).json({
       status: 'ERROR',
-      message: 'Database migration failed',
+      message: 'Database setup failed',
       error: error.message,
       timestamp: new Date().toISOString()
     });
