@@ -1,8 +1,0 @@
-Version: 0.1.1
-Deploy Date: 2025-09-09
-Changes:
-- Fixed font loading errors
-- Fixed API connection issues
-- Improved admin dashboard UI/UX
-- Applied industry-leading design standards
-- Fixed text overflow and readability issues

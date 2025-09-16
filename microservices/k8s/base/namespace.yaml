@@ -1,8 +1,0 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: onetime
-  labels:
-    name: onetime
-    app.kubernetes.io/name: onetime
-    app.kubernetes.io/part-of: onetime-platform
