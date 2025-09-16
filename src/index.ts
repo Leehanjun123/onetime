@@ -1,6 +1,4 @@
 import express, { Request, Response, NextFunction } from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
 import morgan from 'morgan';
 import { PrismaClient } from '@prisma/client';
 import dotenv from 'dotenv';
@@ -24,6 +22,12 @@ import authRoutes from './routes/auth';
 import jobRoutes from './routes/jobs';
 import userRoutes from './routes/users';
 import matchingRoutes from './routes/matching';
+import securityRoutes from './routes/security';
+import { 
+  comprehensiveSecurityMiddleware,
+  generalRateLimit,
+  authRateLimit 
+} from './middleware/security';
 
 // Load environment variables
 dotenv.config();
@@ -73,32 +77,22 @@ app.use(requestTimeout(30000)); // 30 second timeout
 app.use(requestSizeLimiter('10mb'));
 app.use(cacheHeaders);
 
-// Security and logging middleware
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "https:"],
-    },
-  },
-}));
+// Centralized security middleware
+app.use(comprehensiveSecurityMiddleware);
 
-app.use(cors({
-  origin: process.env.CORS_ORIGIN || "*",
-  credentials: true,
-}));
+// Rate limiting
+app.use(generalRateLimit);
 
 app.use(morgan('combined'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// API Routes
-app.use('/api/auth', authRoutes);
+// API Routes with specific rate limiting
+app.use('/api/auth', authRateLimit, authRoutes);
 app.use('/api/jobs', jobRoutes);  
 app.use('/api/users', userRoutes);
 app.use('/api/matching', matchingRoutes);
+app.use('/api/security', securityRoutes);
 
 // Health check endpoint with enhanced information
 app.get('/health', async (req: Request, res: Response) => {

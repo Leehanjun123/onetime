@@ -4,6 +4,8 @@ import { PrismaClient, User, UserType } from '@prisma/client';
 import { body, validationResult } from 'express-validator';
 import rateLimit from 'express-rate-limit';
 import { authenticateToken, generateToken, AuthenticatedRequest } from '../middleware/auth';
+import { trackFailedLogin, recordSecurityEvent } from '../middleware/security';
+import { validatePasswordStrength } from '../config/security';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -60,6 +62,17 @@ router.post('/register', authLimiter, registerValidation, async (req: Request<{}
     }
 
     const { email, password, name, userType = 'WORKER' } = req.body;
+    const clientIP = req.ip || 'unknown';
+    const userAgent = req.headers['user-agent'] || 'unknown';
+
+    // Validate password strength
+    const passwordValidation = validatePasswordStrength(password);
+    if (!passwordValidation.isValid) {
+      return res.status(400).json({ 
+        error: '비밀번호가 보안 요구사항을 충족하지 않습니다',
+        feedback: passwordValidation.feedback
+      });
+    }
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
@@ -67,6 +80,14 @@ router.post('/register', authLimiter, registerValidation, async (req: Request<{}
     });
 
     if (existingUser) {
+      await recordSecurityEvent(
+        'DUPLICATE_REGISTRATION_ATTEMPT',
+        'LOW',
+        { email },
+        undefined,
+        clientIP,
+        userAgent
+      );
       return res.status(409).json({ error: 'User already exists with this email' });
     }
 
@@ -129,6 +150,24 @@ router.post('/login', authLimiter, loginValidation, async (req: Request<{}, {}, 
     }
 
     const { email, password } = req.body;
+    const clientIP = req.ip || 'unknown';
+    const userAgent = req.headers['user-agent'] || 'unknown';
+
+    // Check if account is locked due to failed attempts
+    const isLocked = await trackFailedLogin(email, clientIP, userAgent);
+    if (isLocked) {
+      await recordSecurityEvent(
+        'LOGIN_ATTEMPT_BLOCKED',
+        'HIGH',
+        { email, reason: 'Account locked due to failed attempts' },
+        undefined,
+        clientIP,
+        userAgent
+      );
+      return res.status(423).json({ 
+        error: '계정이 일시적으로 잠겼습니다. 잠시 후 다시 시도해주세요.' 
+      });
+    }
 
     // Find user with password field
     const user = await prisma.user.findUnique({
@@ -136,17 +175,37 @@ router.post('/login', authLimiter, loginValidation, async (req: Request<{}, {}, 
     });
 
     if (!user || !user.password) {
+      // Record failed login attempt
+      await trackFailedLogin(email, clientIP, userAgent);
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
     // Check if user account is active
     if (user.status !== 'ACTIVE') {
+      await recordSecurityEvent(
+        'LOGIN_ATTEMPT_SUSPENDED_ACCOUNT',
+        'MEDIUM',
+        { email, status: user.status },
+        user.id,
+        clientIP,
+        userAgent
+      );
       return res.status(401).json({ error: 'Account is suspended or deleted' });
     }
 
     // Verify password
     const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
+      // Record failed login attempt
+      await trackFailedLogin(email, clientIP, userAgent);
+      await recordSecurityEvent(
+        'FAILED_LOGIN_ATTEMPT',
+        'MEDIUM',
+        { email },
+        user.id,
+        clientIP,
+        userAgent
+      );
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
