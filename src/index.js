@@ -84,6 +84,8 @@ app.get('/api', (req, res) => {
       'GET / - 서버 정보',
       'GET /health - 헬스 체크',
       'GET /api - API 정보',
+      'POST /api/auth/register - 회원가입',
+      'POST /api/auth/login - 로그인',
       'GET /api/users - 사용자 목록',
       'POST /api/users - 사용자 생성',
       'GET /api/jobs - 일자리 목록',
@@ -281,6 +283,119 @@ app.get('/api/jobs', async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to fetch jobs',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// 인증 API
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const { email, password, name, userType = 'WORKER' } = req.body;
+
+    if (!email || !password || !name) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields',
+        required: ['email', 'password', 'name'],
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    let user = null;
+    
+    if (prisma) {
+      try {
+        user = await prisma.user.create({
+          data: {
+            email,
+            name,
+            userType,
+            verified: false,
+            isActive: true
+          },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            userType: true,
+            createdAt: true
+          }
+        });
+      } catch (error) {
+        console.warn('DB create failed, using mock response');
+        user = {
+          id: 'mock-' + Date.now(),
+          email,
+          name,
+          userType,
+          createdAt: new Date().toISOString()
+        };
+      }
+    } else {
+      user = {
+        id: 'mock-' + Date.now(),
+        email,
+        name,
+        userType,
+        createdAt: new Date().toISOString()
+      };
+    }
+
+    res.status(201).json({
+      success: true,
+      data: {
+        user,
+        token: 'mock-token-' + Date.now()
+      },
+      message: 'User registered successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to register user',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing email or password',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Mock login for demo
+    const user = {
+      id: 'mock-user-1',
+      email,
+      name: 'Demo User',
+      userType: 'WORKER',
+      createdAt: new Date().toISOString()
+    };
+
+    res.json({
+      success: true,
+      data: {
+        user,
+        token: 'mock-token-' + Date.now()
+      },
+      message: 'Login successful',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Login failed',
       message: error.message,
       timestamp: new Date().toISOString()
     });

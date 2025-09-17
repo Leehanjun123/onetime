@@ -1,6 +1,6 @@
 // API 설정
 export const API_CONFIG = {
-  BASE_URL: process.env.NEXT_PUBLIC_API_URL || 'https://onetime-production.up.railway.app/api/v1',
+  BASE_URL: process.env.NEXT_PUBLIC_API_URL || 'https://onetime-production.up.railway.app/api',
   BACKEND_URL: process.env.NEXT_PUBLIC_BACKEND_URL || 'https://onetime-production.up.railway.app',
   SOCKET_URL: process.env.NEXT_PUBLIC_SOCKET_URL || 'https://onetime-production.up.railway.app',
   
