@@ -158,104 +158,14 @@ export default function JobsPage() {
     }
   };
 
-  const applyFilters = () => {
-    let filtered = [...jobs];
-
-    // 검색 분석 이벤트 추적
-    const searchFilters = [];
-    if (activeQuickFilter) searchFilters.push(activeQuickFilter);
-    if (filters.category && filters.category !== '전체') searchFilters.push(filters.category);
-    if (filters.minPay) searchFilters.push(`min_pay_${filters.minPay}`);
-    if (filters.urgent) searchFilters.push('urgent_only');
-
-    // 빠른 필터 적용
-    if (activeQuickFilter) {
-      switch (activeQuickFilter) {
-        case 'today_pay':
-          filtered = filtered.filter(job => job.benefits.some(benefit => 
-            benefit.includes('당일') || benefit.includes('즉시')
-          ));
-          break;
-        case 'nearby_5km':
-          filtered = filtered.filter(job => 
-            job.location.includes('km') && 
-            parseFloat(job.location.match(/(\d+\.?\d*)km/)?.[1] || '10') <= 5
-          );
-          break;
-        case 'urgent':
-          filtered = filtered.filter(job => job.urgent);
-          break;
-        case 'high_pay':
-          filtered = filtered.filter(job => job.hourlyPay >= 15000);
-          break;
-      }
-    }
-
-    // 검색어 필터
-    if (filters.search) {
-      filtered = filtered.filter(job => 
-        job.title.toLowerCase().includes(filters.search.toLowerCase()) ||
-        job.company.toLowerCase().includes(filters.search.toLowerCase()) ||
-        job.description.toLowerCase().includes(filters.search.toLowerCase())
-      );
-    }
-
-    // 카테고리 필터
-    if (filters.category && filters.category !== '전체') {
-      filtered = filtered.filter(job => job.category === filters.category);
-    }
-
-    // 급여 필터
-    if (filters.minPay) {
-      filtered = filtered.filter(job => job.hourlyPay >= parseInt(filters.minPay));
-    }
-    if (filters.maxPay) {
-      filtered = filtered.filter(job => job.hourlyPay <= parseInt(filters.maxPay));
-    }
-
-    // 긴급 필터
-    if (filters.urgent) {
-      filtered = filtered.filter(job => job.urgent);
-    }
-
-    // 정렬 (거리 우선)
-    filtered.sort((a, b) => {
-      switch (filters.sortBy) {
-        case 'distance':
-          // 거리순 정렬 (임시로 location에서 km 추출)
-          const distanceA = parseFloat(a.location.match(/(\d+\.?\d*)km/)?.[1] || '999');
-          const distanceB = parseFloat(b.location.match(/(\d+\.?\d*)km/)?.[1] || '999');
-          return distanceA - distanceB;
-        case 'pay_high':
-          return b.hourlyPay - a.hourlyPay;
-        case 'pay_low':
-          return a.hourlyPay - b.hourlyPay;
-        case 'deadline':
-          return new Date(a.deadlineAt).getTime() - new Date(b.deadlineAt).getTime();
-        case 'recent':
-          return new Date(b.postedAt).getTime() - new Date(a.postedAt).getTime();
-        default:
-          return new Date(b.postedAt).getTime() - new Date(a.postedAt).getTime();
-      }
-    });
-
-    // 검색 분석 이벤트 추적
-    trackJobSearch({
-      category: filters.category || activeQuickFilter || undefined,
-      location: filters.location || '현재 위치',
-      filters: searchFilters,
-      results_count: filtered.length
-    });
-
-    setFilteredJobs(filtered);
+  // 필터 변경 핸들러 (서버 사이드 필터링으로 대체)
+  const handleFilterChange = (newFilters: any) => {
+    setFilters(prev => ({ ...prev, ...newFilters }));
     setCurrentPage(1);
   };
 
-  // 페이지네이션
-  const indexOfLastJob = currentPage * jobsPerPage;
-  const indexOfFirstJob = indexOfLastJob - jobsPerPage;
-  const currentJobs = filteredJobs.slice(indexOfFirstJob, indexOfLastJob);
-  const totalPages = Math.ceil(filteredJobs.length / jobsPerPage);
+  // 페이지네이션 (서버 사이드에서 처리)
+  const totalPages = Math.ceil(totalJobs / jobsPerPage);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -265,13 +175,6 @@ export default function JobsPage() {
     });
   };
 
-  const getDaysRemaining = (deadline: string) => {
-    const today = new Date();
-    const deadlineDate = new Date(deadline);
-    const diffTime = deadlineDate.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
-  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -284,7 +187,7 @@ export default function JobsPage() {
             <div>
               <h1 className="text-2xl font-bold text-gray-900">내 주변 일자리</h1>
               <p className="text-sm text-gray-600 flex items-center">
-                📍 가까운 순 • {filteredJobs.length}개 일자리
+                📍 가까운 순 • {totalJobs}개 일자리
               </p>
             </div>
             <button
@@ -504,7 +407,7 @@ export default function JobsPage() {
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto"></div>
                 <p className="mt-4 text-gray-600">가까운 일자리를 찾는 중...</p>
               </div>
-            ) : currentJobs.length === 0 ? (
+            ) : jobs.length === 0 ? (
               <div className="text-center py-12">
                 <div className="text-6xl mb-4">📍</div>
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
@@ -519,7 +422,7 @@ export default function JobsPage() {
                 {/* 상단 배너 광고 */}
                 <BannerAd position="top" />
                 
-                {currentJobs.map((job, index) => (
+                {jobs.map((job, index) => (
                   <React.Fragment key={job.id}>
                     {/* 3개마다 인피드 광고 삽입 */}
                     {index > 0 && index % 3 === 0 && <InFeedAd />}
@@ -536,20 +439,15 @@ export default function JobsPage() {
                           <h3 className="text-lg font-bold text-gray-900 leading-tight">
                             {job.title}
                           </h3>
-                          {job.urgent && (
-                            <span className="ml-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full font-medium">
-                              🚨 긴급
-                            </span>
-                          )}
                         </div>
-                        <p className="text-gray-600 text-sm">{job.company}</p>
+                        <p className="text-gray-600 text-sm">{job.employer.name}</p>
                         <p className="text-orange-600 text-sm font-medium flex items-center">
                           📍 {job.location}
                         </p>
                       </div>
                       <div className="text-right">
                         <div className="text-xl font-black text-orange-600">
-                          {job.hourlyPay.toLocaleString()}원
+                          {job.wage.toLocaleString()}원
                         </div>
                         <div className="text-xs text-gray-500">
                           시급
@@ -563,13 +461,11 @@ export default function JobsPage() {
                         {job.category}
                       </span>
                       <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-lg">
-                        {job.workingHours}
+                        근무일: {new Date(job.workDate).toLocaleDateString('ko-KR')}
                       </span>
-                      {job.benefits.includes('당일 정산') && (
-                        <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-lg font-medium">
-                          💰 당일정산
-                        </span>
-                      )}
+                      <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-lg font-medium">
+                        💰 시급 {job.wage.toLocaleString()}원
+                      </span>
                     </div>
 
                     {/* 설명 */}
@@ -596,7 +492,7 @@ export default function JobsPage() {
                     {/* 하단: 등록일, 액션 버튼 */}
                     <div className="flex justify-between items-center pt-3 border-t border-gray-100">
                       <div className="text-xs text-gray-500">
-                        {formatDate(job.postedAt)} • {getDaysRemaining(job.deadlineAt)}일 남음
+                        {formatDate(job.createdAt)}
                       </div>
                       <div className="flex space-x-2">
                         <button 
@@ -619,12 +515,12 @@ export default function JobsPage() {
                               job_id: job.id,
                               job_title: job.title,
                               job_category: job.category,
-                              hourly_pay: job.hourlyPay,
-                              is_urgent: job.urgent,
+                              hourly_pay: job.wage,
                               application_method: 'call'
                             });
                             // 전화 걸기 기능
-                            window.open(`tel:${job.contactInfo.phone}`, '_self');
+                            // 연락처 기능은 추후 구현
+                            alert('고용주에게 연락하는 기능은 추후 구현예정입니다.');
                           }}
                           className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md hover:shadow-lg transition-all"
                         >
@@ -668,7 +564,7 @@ export default function JobsPage() {
                       onClick={() => setCurrentPage(prev => prev + 1)}
                       className="bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-xl font-medium hover:bg-gray-50 transition-colors"
                     >
-                      더 많은 일자리 보기 ({filteredJobs.length - (currentPage * jobsPerPage)}개 더)
+                      더 많은 일자리 보기 ({Math.max(0, totalJobs - (currentPage * jobsPerPage))}개 더)
                     </button>
                   </div>
                 )}
