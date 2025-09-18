@@ -85,22 +85,22 @@ app.post('/api/db/init', async (req, res) => {
       });
     }
 
-    // 마이그레이션 실행 (내부적으로)
+    // 스키마 푸시 실행 (기존 DB에 대해 안전)
     const { exec } = require('child_process');
-    exec('npx prisma migrate deploy', (error, stdout, stderr) => {
+    exec('npx prisma db push --force-reset', (error, stdout, stderr) => {
       if (error) {
-        console.error('Migration error:', error);
+        console.error('DB Push error:', error);
         return res.status(500).json({
           success: false,
-          error: 'Migration failed',
+          error: 'Database push failed',
           details: error.message
         });
       }
       
-      console.log('Migration output:', stdout);
+      console.log('DB Push output:', stdout);
       res.json({
         success: true,
-        message: 'Database initialized successfully',
+        message: 'Database schema synchronized successfully',
         output: stdout
       });
     });
