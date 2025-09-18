@@ -30,17 +30,20 @@ async function apiRequest(endpoint: string, options: RequestInit = {}) {
 
 // 인증 API
 export const authAPI = {
-  register: (userData: any) => 
-    apiRequest('/auth/register', {
+  register: (userData: { email: string; password: string; name: string; userType?: 'WORKER' | 'EMPLOYER' }) => 
+    apiRequest('/v1/auth/register', {
       method: 'POST',
       body: JSON.stringify(userData),
     }),
 
-  login: (credentials: any) =>
-    apiRequest('/auth/login', {
+  login: (credentials: { email: string; password: string }) =>
+    apiRequest('/v1/auth/login', {
       method: 'POST',
       body: JSON.stringify(credentials),
     }),
+
+  getCurrentUser: () => 
+    apiRequest('/auth/me'),
 
   logout: () => {
     localStorage.removeItem('token');
@@ -50,32 +53,34 @@ export const authAPI = {
 
 // 구인공고 API
 export const jobAPI = {
-  getJobs: (params?: any) => {
-    const queryString = params ? `?${new URLSearchParams(params).toString()}` : '';
+  getJobs: (params?: { category?: string; location?: string; page?: number; limit?: number }) => {
+    const queryString = params ? `?${new URLSearchParams(params as any).toString()}` : '';
     return apiRequest(`/jobs${queryString}`);
   },
 
   getJobById: (id: string) =>
     apiRequest(`/jobs/${id}`),
 
-  createJob: (jobData: any) =>
+  createJob: (jobData: {
+    title: string;
+    description: string;
+    category: string;
+    location: string;
+    wage: number;
+    workDate: string;
+  }) =>
     apiRequest('/jobs', {
       method: 'POST',
       body: JSON.stringify(jobData),
     }),
 
-  updateJob: (id: string, jobData: any) =>
-    apiRequest(`/jobs/${id}`, {
+  updateJobStatus: (id: string, status: 'OPEN' | 'COMPLETED' | 'CANCELLED') =>
+    apiRequest(`/jobs/${id}/status`, {
       method: 'PUT',
-      body: JSON.stringify(jobData),
+      body: JSON.stringify({ status }),
     }),
 
-  deleteJob: (id: string) =>
-    apiRequest(`/jobs/${id}`, {
-      method: 'DELETE',
-    }),
-
-  applyToJob: (id: string, applicationData: any) =>
+  applyToJob: (id: string, applicationData: { message?: string }) =>
     apiRequest(`/jobs/${id}/apply`, {
       method: 'POST',
       body: JSON.stringify(applicationData),
@@ -85,9 +90,9 @@ export const jobAPI = {
 // 사용자 API
 export const userAPI = {
   getProfile: () =>
-    apiRequest('/users/profile'),
+    apiRequest('/auth/me'),
 
-  updateProfile: (userData: any) =>
+  updateProfile: (userData: { name?: string; userType?: 'WORKER' | 'EMPLOYER' }) =>
     apiRequest('/users/profile', {
       method: 'PUT',
       body: JSON.stringify(userData),
@@ -100,21 +105,30 @@ export const userAPI = {
     apiRequest('/users/jobs'),
 };
 
-// 매칭 API
-export const matchingAPI = {
-  requestMatching: (matchingData: any) =>
-    apiRequest('/matching/request', {
-      method: 'POST',
-      body: JSON.stringify(matchingData),
+// 지원 관리 API
+export const applicationAPI = {
+  updateStatus: (applicationId: string, status: 'PENDING' | 'ACCEPTED' | 'REJECTED') =>
+    apiRequest(`/applications/${applicationId}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status }),
     }),
-
-  getMatchingStatus: (id: string) =>
-    apiRequest(`/matching/${id}`),
 };
+
+// 카테고리 상수
+export const JOB_CATEGORIES = [
+  '일반알바',
+  '단기알바', 
+  '배달',
+  '청소',
+  '이사',
+  '포장',
+  '행사도우미',
+  '기타'
+] as const;
 
 export default {
   auth: authAPI,
   jobs: jobAPI,
   user: userAPI,
-  matching: matchingAPI,
+  applications: applicationAPI,
 };

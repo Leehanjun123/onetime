@@ -7,32 +7,30 @@ import Footer from '@/components/Footer';
 import { trackEvent, trackJobSearch, trackJobApplication } from '@/components/Analytics';
 import FavoriteButton from '@/components/FavoriteButton';
 import { BannerAd, InFeedAd, MobileBottomAd } from '@/components/AdSense';
+import { jobAPI, JOB_CATEGORIES } from '@/lib/api';
 
 interface Job {
   id: string;
   title: string;
-  company: string;
-  location: string;
-  hourlyPay: number;
-  workingHours: string;
-  workDays: string[];
-  category: string;
   description: string;
-  requirements: string[];
-  benefits: string[];
-  urgent: boolean;
-  postedAt: string;
-  deadlineAt: string;
-  contactInfo: {
-    phone: string;
-    email: string;
+  category: string;
+  location: string;
+  wage: number;
+  workDate: string;
+  status: 'OPEN' | 'COMPLETED' | 'CANCELLED';
+  createdAt: string;
+  updatedAt: string;
+  employer: {
+    id: string;
+    name: string;
+    userType: string;
   };
 }
 
 export default function JobsPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
-  const [filteredJobs, setFilteredJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
+  const [totalJobs, setTotalJobs] = useState(0);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [activeQuickFilter, setActiveQuickFilter] = useState('');
@@ -48,16 +46,17 @@ export default function JobsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const jobsPerPage = 20;
 
-  // 건설업 중심 카테고리 (아이콘 포함)
+  // 실제 백엔드 카테고리와 일치하는 카테고리 목록
   const jobCategories = [
-    { name: '전체', icon: '🏢', count: 245, color: 'orange' },
-    { name: '건설/토목', icon: '🏗️', count: 89, color: 'yellow', highlight: true },
-    { name: '공장/제조', icon: '🏭', count: 67, color: 'blue' },
-    { name: '운반/물류', icon: '🚚', count: 45, color: 'green' },
-    { name: '시설관리', icon: '🔧', count: 32, color: 'indigo' },
-    { name: '청소/환경', icon: '🧹', count: 28, color: 'purple' },
-    { name: '카페/음료', icon: '☕', count: 24, color: 'pink' },
-    { name: '기타', icon: '📋', count: 21, color: 'gray' }
+    { name: '전체', icon: '🏢', color: 'orange' },
+    { name: '일반알바', icon: '👔', color: 'blue' },
+    { name: '단기알바', icon: '⏰', color: 'yellow', highlight: true },
+    { name: '배달', icon: '🛵', color: 'green' },
+    { name: '청소', icon: '🧹', color: 'purple' },
+    { name: '이사', icon: '📦', color: 'indigo' },
+    { name: '포장', icon: '📦', color: 'pink' },
+    { name: '행사도우미', icon: '🎪', color: 'teal' },
+    { name: '기타', icon: '📋', color: 'gray' }
   ];
 
   // 빠른 필터
@@ -72,7 +71,7 @@ export default function JobsPage() {
     fetchJobs();
     getUserLocation();
     
-    // 페이지 뷰 추적 (이미 Analytics.tsx의 PageTracker에서 처리하지만 추가 컨텍스트 제공)
+    // 페이지 뷰 추적
     trackEvent('jobs_page_view', {
       event_category: 'page_interaction',
       page_type: 'job_listing',
@@ -81,8 +80,8 @@ export default function JobsPage() {
   }, []);
 
   useEffect(() => {
-    applyFilters();
-  }, [jobs, filters, userLocation]);
+    fetchJobs();
+  }, [filters, currentPage]);
 
   // 위치 정보 가져오기
   const getUserLocation = () => {
@@ -122,120 +121,35 @@ export default function JobsPage() {
     try {
       setLoading(true);
       
-      // 백엔드 API 호출
-      const response = await fetch('http://localhost:5000/api/v1/jobs');
-      const data = await response.json();
+      // 실제 API 호출
+      const params: any = {
+        page: currentPage,
+        limit: jobsPerPage
+      };
       
-      if (data.success && data.data?.jobs) {
-        // API 데이터를 컴포넌트 형식에 맞게 변환 (위치 정보 포함)
-        const formattedJobs: Job[] = data.data.jobs.map((job: any) => ({
-          id: job.id,
-          title: job.title,
-          company: job.company?.name || '회사명',
-          location: job.location,
-          hourlyPay: job.salaryMin || 100000,
-          workingHours: job.startTime && job.endTime ? `${job.startTime}-${job.endTime}` : '09:00-18:00',
-          workDays: ['월', '화', '수', '목', '금'],
-          category: job.category || '기타',
-          description: job.description || '',
-          requirements: job.requirements || [],
-          benefits: job.benefits || [],
-          urgent: job.isUrgent || false,
-          postedAt: job.createdAt || new Date().toISOString(),
-          deadlineAt: job.workDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-          contactInfo: {
-            phone: '02-1234-5678',
-            email: 'contact@company.com'
-          }
-        }));
-        
-        setJobs(formattedJobs);
-      } else {
-        // API 호출 실패시 위치 기반 임시 데이터 사용
-        const mockJobs: Job[] = [
-        {
-          id: '1',
-          title: '건설현장 일용직 모집 (당일정산)',
-          company: '대한건설 강남현장',
-          location: '서울 강남구 (2.1km)',
-          hourlyPay: 18000,
-          workingHours: '08:00-17:00 (8시간)',
-          workDays: ['월', '화', '수', '목', '금'],
-          category: '건설/토목',
-          description: '신축 아파트 건설현장에서 함께 일하실 분을 모집합니다. 경력무관, 당일정산 가능합니다.',
-          requirements: ['건강한 성인 남녀', '성실한 근무태도', '안전수칙 준수'],
-          benefits: ['당일 정산', '중식 제공', '안전장비 지급', '교통비 지원'],
-          urgent: true,
-          postedAt: '2025-09-08',
-          deadlineAt: '2025-09-10',
-          contactInfo: {
-            phone: '010-1234-5678',
-            email: 'recruit@daehan-construction.com'
-          }
-        },
-        {
-          id: '2',
-          title: '카페 바리스타 (3km)',
-          company: '스타벅스 역삼역점',
-          location: '서울 강남구 (3.2km)',
-          hourlyPay: 12000,
-          workingHours: '06:00-14:00 (8시간)',
-          workDays: ['월', '화', '수', '목', '금'],
-          category: '카페/음료',
-          description: '오픈 시간대 바리스타를 모집합니다. 커피에 관심 있으신 분 환영합니다.',
-          requirements: ['고등학교 졸업 이상', '서비스업 경험 우대', '새벽 근무 가능자'],
-          benefits: ['당일 정산', '음료 할인', '교통비 지원', '유연근무'],
-          urgent: false,
-          postedAt: '2025-09-07',
-          deadlineAt: '2025-09-15',
-          contactInfo: {
-            phone: '02-1234-5678',
-            email: 'hiring@starbucks-yeoksam.com'
-          }
-        },
-        {
-          id: '3',
-          title: '긴급! 배달라이더 (고액일당)',
-          company: '쿠팡이츠 서울지점',
-          location: '서울 전지역 (1.5km)',
-          hourlyPay: 20000,
-          workingHours: '11:00-21:00 (자유선택)',
-          workDays: ['매일'],
-          category: '배달/운전',
-          description: '주말 성수기 배달라이더 긴급 모집! 높은 수익 보장됩니다.',
-          requirements: ['2종 면허 이상', '오토바이 보유자', '스마트폰 필수'],
-          benefits: ['고액 일당', '주유비 지원', '보험 완비', '인센티브'],
-          urgent: true,
-          postedAt: '2025-09-08',
-          deadlineAt: '2025-09-09',
-          contactInfo: {
-            phone: '1588-1234',
-            email: 'recruit@coupangeats.com'
-          }
-        },
-        {
-          id: '4',
-          title: '편의점 야간알바 (5km 이내)',
-          company: 'CU 삼성역점',
-          location: '서울 강남구 (4.8km)',
-          hourlyPay: 13500,
-          workingHours: '22:00-06:00 (8시간)',
-          workDays: ['월', '화', '수', '목', '금'],
-          category: '편의점/마트',
-          description: '성실한 야간 근무자를 찾습니다. 야간수당 포함된 시급입니다.',
-          requirements: ['성인 남녀', '야간 근무 가능', '책임감 있는 분'],
-          benefits: ['야간수당 포함', '당일 정산', '4대보험', '교통비'],
-          urgent: false,
-          postedAt: '2025-09-06',
-          deadlineAt: '2025-09-20',
-          contactInfo: {
-            phone: '02-2345-6789',
-            email: 'manager@cu-samsung.com'
-          }
-        }
-      ];
+      if (filters.category && filters.category !== '전체') {
+        params.category = filters.category;
+      }
+      
+      if (filters.location) {
+        params.location = filters.location;
+      }
 
-        setJobs(mockJobs);
+      const data = await jobAPI.getJobs(params);
+      
+      if (data.success && data.data) {
+        setJobs(data.data);
+        setTotalJobs(data.total || data.data.length);
+        
+        // 검색 추적
+        trackJobSearch({
+          category: filters.category,
+          location: filters.location,
+          results_count: data.data.length
+        });
+      } else {
+        console.error('Failed to fetch jobs:', data);
+        setJobs([]);
       }
     } catch (error) {
       console.error('Failed to fetch jobs:', error);
