@@ -1,5 +1,5 @@
 // API 클라이언트 설정
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://onetime-production.up.railway.app/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api';
 
 // API 헬퍼 함수
 async function apiRequest(endpoint: string, options: RequestInit = {}) {

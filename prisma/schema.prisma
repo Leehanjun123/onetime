@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -124,7 +124,7 @@ model WorkSession {
   totalHours Float?
   totalPay   Int?
   status     SessionStatus @default(IN_PROGRESS)
-  photos     String[]  // 작업 사진 URLs
+  photos     String?   // 작업 사진 URLs (JSON string)
   notes      String?
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt

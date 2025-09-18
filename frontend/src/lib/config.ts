@@ -1,20 +1,20 @@
 // API 설정
 export const API_CONFIG = {
-  BASE_URL: process.env.NEXT_PUBLIC_API_URL || 'https://onetime-production.up.railway.app/api/v1',
+  BASE_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api',
   BACKEND_URL: process.env.NEXT_PUBLIC_BACKEND_URL || 'https://onetime-production.up.railway.app',
   SOCKET_URL: process.env.NEXT_PUBLIC_SOCKET_URL || 'https://onetime-production.up.railway.app',
   
   // 개발 환경에서만 localhost 사용
   get LOCAL_API_URL() {
     if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-      return 'https://onetime-production.up.railway.app/api';
+      return 'http://localhost:3002/api';
     }
     return this.BASE_URL;
   },
   
   get LOCAL_BACKEND_URL() {
     if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-      return 'https://onetime-production.up.railway.app';
+      return 'http://localhost:3002';
     }
     return this.BACKEND_URL;
   }
