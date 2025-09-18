@@ -75,6 +75,45 @@ app.get('/health', async (req, res) => {
   res.json(health);
 });
 
+// 데이터베이스 초기화 엔드포인트 (프로덕션용)
+app.post('/api/db/init', async (req, res) => {
+  try {
+    if (!prisma) {
+      return res.status(503).json({
+        success: false,
+        error: 'Database client not available'
+      });
+    }
+
+    // 마이그레이션 실행 (내부적으로)
+    const { exec } = require('child_process');
+    exec('npx prisma migrate deploy', (error, stdout, stderr) => {
+      if (error) {
+        console.error('Migration error:', error);
+        return res.status(500).json({
+          success: false,
+          error: 'Migration failed',
+          details: error.message
+        });
+      }
+      
+      console.log('Migration output:', stdout);
+      res.json({
+        success: true,
+        message: 'Database initialized successfully',
+        output: stdout
+      });
+    });
+  } catch (error) {
+    console.error('DB Init error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Database initialization failed',
+      details: error.message
+    });
+  }
+});
+
 // 기본 API 정보
 app.get('/api', (req, res) => {
   res.json({
