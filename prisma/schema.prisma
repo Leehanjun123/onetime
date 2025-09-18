@@ -64,51 +64,7 @@ model JobApplication {
   @@map("job_applications")
 }
 
-<<<<<<< HEAD
-// Enums (필수만)
-=======
-// 작업 세션 모델
-model WorkSession {
-  id         String    @id @default(cuid())
-  startTime  DateTime
-  endTime    DateTime?
-  totalHours Float?
-  totalPay   Int?
-  status     SessionStatus @default(IN_PROGRESS)
-  photos     String?   // 작업 사진 URLs (JSON string)
-  notes      String?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-
-  // 관계
-  job      Job    @relation(fields: [jobId], references: [id])
-  jobId    String @unique
-  worker   User   @relation(fields: [workerId], references: [id])
-  workerId String
-
-  @@map("work_sessions")
-}
-
-// 리뷰 모델
-model Review {
-  id       String @id @default(cuid())
-  rating   Int    // 1-5 별점
-  comment  String
-  createdAt DateTime @default(now())
-
-  // 관계
-  job        Job    @relation(fields: [jobId], references: [id])
-  jobId      String
-  reviewer   User   @relation("ReviewsGiven", fields: [reviewerId], references: [id])
-  reviewerId String
-  reviewee   User   @relation("ReviewsReceived", fields: [revieweeId], references: [id])
-  revieweeId String
-
-  @@map("reviews")
-}
-
 // Enums
->>>>>>> complete-recovery
 enum UserType {
   WORKER
   EMPLOYER
