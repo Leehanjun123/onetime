@@ -85,13 +85,19 @@ export const jobAPI = {
 // 사용자 API
 export const userAPI = {
   getProfile: () =>
-    apiRequest('/user/profile'),
+    apiRequest('/users/profile'),
 
   updateProfile: (userData: any) =>
-    apiRequest('/user/profile', {
+    apiRequest('/users/profile', {
       method: 'PUT',
       body: JSON.stringify(userData),
     }),
+    
+  getApplications: () =>
+    apiRequest('/users/applications'),
+    
+  getJobs: () =>
+    apiRequest('/users/jobs'),
 };
 
 // 매칭 API

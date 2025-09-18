@@ -7,14 +7,14 @@ export const API_CONFIG = {
   // 개발 환경에서만 localhost 사용
   get LOCAL_API_URL() {
     if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-      return 'http://localhost:5000/api';
+      return 'http://localhost:3002/api';
     }
     return this.BASE_URL;
   },
   
   get LOCAL_BACKEND_URL() {
     if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-      return 'http://localhost:5000';
+      return 'http://localhost:3002';
     }
     return this.BACKEND_URL;
   }
