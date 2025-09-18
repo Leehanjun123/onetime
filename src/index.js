@@ -775,6 +775,29 @@ app.post('/api/jobs/:jobId/apply', authenticateToken, async (req, res) => {
   }
 });
 
+// API v1 라우트 (프론트엔드 호환성을 위한 별칭)
+app.post('/api/v1/auth/register', (req, res) => {
+  // /api/auth/register와 동일한 로직 실행
+  app._router.handle(Object.assign({}, req, { url: '/api/auth/register' }), res);
+});
+
+app.post('/api/v1/auth/login', (req, res) => {
+  // /api/auth/login과 동일한 로직 실행
+  app._router.handle(Object.assign({}, req, { url: '/api/auth/login' }), res);
+});
+
+app.get('/api/v1/jobs', (req, res) => {
+  app._router.handle(Object.assign({}, req, { url: '/api/jobs' }), res);
+});
+
+app.post('/api/v1/jobs', (req, res) => {
+  app._router.handle(Object.assign({}, req, { url: '/api/jobs' }), res);
+});
+
+app.post('/api/v1/jobs/:jobId/apply', (req, res) => {
+  app._router.handle(Object.assign({}, req, { url: req.url.replace('/api/v1/', '/api/') }), res);
+});
+
 // 404 핸들러
 app.use((req, res) => {
   res.status(404).json({
