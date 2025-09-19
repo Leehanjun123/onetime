@@ -1,5 +1,5 @@
 // API 클라이언트 설정
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://onetime-production.up.railway.app';
+const API_BASE_URL = 'https://onetime-production.up.railway.app';
 
 // API 헬퍼 함수
 async function apiRequest(endpoint: string, options: RequestInit = {}) {
@@ -36,13 +36,13 @@ async function apiRequest(endpoint: string, options: RequestInit = {}) {
 // 인증 API
 export const authAPI = {
   register: (userData: { email: string; password: string; name: string; userType?: 'WORKER' | 'EMPLOYER' }) => 
-    apiRequest('/api/v1/auth/register', {
+    apiRequest('/api/auth/register', {
       method: 'POST',
       body: JSON.stringify(userData),
     }),
 
   login: (credentials: { email: string; password: string }) =>
-    apiRequest('/api/v1/auth/login', {
+    apiRequest('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify(credentials),
     }),
