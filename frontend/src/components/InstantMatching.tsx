@@ -130,7 +130,7 @@ export default function InstantMatching({ userId, onMatchFound, onMatchAccepted 
 
     try {
       // API로 매칭 요청
-      const response = await fetch('http://localhost:5000/api/v1/matching/request', {
+      const response = await fetch('https://onetime-production.up.railway.app/api/v1/matching/request', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -15,7 +15,7 @@ class SocketService {
 
   public connect(userId?: string): Socket {
     if (!this.socket || !this.socket.connected) {
-      this.socket = io(process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000', {
+      this.socket = io(process.env.NEXT_PUBLIC_BACKEND_URL || 'https://onetime-production.up.railway.app', {
         autoConnect: true,
         reconnection: true,
         reconnectionDelay: 1000,

@@ -46,7 +46,7 @@ export default function ChatWindow({ chatRoomId, otherUserId, otherUserName, job
     if (!user) return;
 
     // Socket.IO 연결
-    const newSocket = io('http://localhost:5000', {
+    const newSocket = io('https://onetime-production.up.railway.app', {
       auth: {
         token: localStorage.getItem('token')
       }
@@ -100,7 +100,7 @@ export default function ChatWindow({ chatRoomId, otherUserId, otherUserName, job
   const fetchChatHistory = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/v1/chat/${chatRoomId}/messages`, {
+      const response = await fetch(`https://onetime-production.up.railway.app/api/v1/chat/${chatRoomId}/messages`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }

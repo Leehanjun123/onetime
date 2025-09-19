@@ -185,7 +185,7 @@ export default function JobDetailPage({ params }: { params: { id: string } }) {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/v1/jobs/${params.id}`, {
+      const response = await fetch(`https://onetime-production.up.railway.app/api/v1/jobs/${params.id}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -277,7 +277,7 @@ export default function JobDetailPage({ params }: { params: { id: string } }) {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/v1/job-applications', {
+      const response = await fetch('https://onetime-production.up.railway.app/api/v1/job-applications', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

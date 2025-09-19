@@ -24,7 +24,7 @@ export default function NotificationCenter() {
   useEffect(() => {
     if (isAuthenticated && user) {
       // WebSocket 연결
-      const newSocket = io('http://localhost:5000', {
+      const newSocket = io('https://onetime-production.up.railway.app', {
         auth: {
           token: localStorage.getItem('token')
         }
@@ -81,7 +81,7 @@ export default function NotificationCenter() {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const response = await fetch('http://localhost:5000/api/v1/notifications', {
+      const response = await fetch('https://onetime-production.up.railway.app/api/v1/notifications', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -104,7 +104,7 @@ export default function NotificationCenter() {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const response = await fetch(`http://localhost:5000/api/v1/notifications/${notificationId}/read`, {
+      const response = await fetch(`https://onetime-production.up.railway.app/api/v1/notifications/${notificationId}/read`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`

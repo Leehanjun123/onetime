@@ -159,7 +159,7 @@ export default function CreateResumePage() {
         return;
       }
 
-      const response = await fetch('http://localhost:5000/api/v1/resume', {
+      const response = await fetch('https://onetime-production.up.railway.app/api/v1/resume', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

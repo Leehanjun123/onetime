@@ -72,7 +72,7 @@ export default function ReviewsPage() {
         ? '/api/v1/reviews/received'
         : '/api/v1/reviews/written';
       
-      const response = await fetch(`http://localhost:5000${endpoint}`, {
+      const response = await fetch(`https://onetime-production.up.railway.app${endpoint}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -170,7 +170,7 @@ export default function ReviewsPage() {
   const fetchMyStats = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/v1/reviews/stats', {
+      const response = await fetch('https://onetime-production.up.railway.app/api/v1/reviews/stats', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -201,7 +201,7 @@ export default function ReviewsPage() {
   const handleSubmitReview = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/v1/reviews', {
+      const response = await fetch('https://onetime-production.up.railway.app/api/v1/reviews', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
