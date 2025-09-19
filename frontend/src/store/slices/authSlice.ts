@@ -41,12 +41,11 @@ export const register = createAsyncThunk(
   async (userData: {
     email: string;
     password: string;
-    firstName: string;
-    lastName?: string;
-    phone?: string;
+    name: string;
+    userType?: 'WORKER' | 'EMPLOYER';
   }) => {
     const response = await authAPI.register(userData);
-    return response.data;
+    return response;
   }
 );
 
@@ -123,14 +122,14 @@ const authSlice = createSlice({
       })
       .addCase(login.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.user = action.payload.user;
-        state.token = action.payload.token;
+        state.user = action.payload.data.user;
+        state.token = action.payload.data.token;
         state.isAuthenticated = true;
         state.error = null;
         // Save to localStorage
         if (typeof window !== 'undefined') {
-          localStorage.setItem('token', action.payload.token);
-          localStorage.setItem('user', JSON.stringify(action.payload.user));
+          localStorage.setItem('token', action.payload.data.token);
+          localStorage.setItem('user', JSON.stringify(action.payload.data.user));
         }
       })
       .addCase(login.rejected, (state, action) => {
