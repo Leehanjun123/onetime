@@ -12,13 +12,15 @@ export default function LoginPage() {
   const { isLoading, error } = useAppSelector((state) => state.auth);
   
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
+    email: 'test@test.com',
+    password: 'test123',
     userType: 'worker' // 'worker' or 'employer'
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    console.log('🔑 로그인 시도:', { email: formData.email, password: formData.password });
 
     try {
       const resultAction = await dispatch(login({
@@ -26,13 +28,16 @@ export default function LoginPage() {
         password: formData.password,
       }));
       
+      console.log('🔑 로그인 결과:', resultAction);
+      
       if (login.fulfilled.match(resultAction)) {
         // 로그인 성공
+        console.log('✅ 로그인 성공, 홈으로 이동');
         router.push('/');
       }
     } catch (err) {
       // 에러는 Redux slice에서 처리
-      console.error('Login error:', err);
+      console.error('❌ Login error:', err);
     }
   };
 
@@ -129,10 +134,17 @@ export default function LoginPage() {
 
           {/* Error Message */}
           {error && (
-            <div className="text-red-600 text-sm text-center">
-              {error}
+            <div className="text-red-600 text-sm text-center bg-red-50 p-3 rounded">
+              ❌ {error}
             </div>
           )}
+
+          {/* 디버깅 정보 */}
+          <div className="text-xs text-gray-500 text-center bg-blue-50 p-2 rounded">
+            <p>🐛 디버깅: test@test.com / test123</p>
+            <p>API: https://onetime-production.up.railway.app/api/auth/login</p>
+            <p>상태: {isLoading ? '로딩중...' : '대기중'}</p>
+          </div>
 
           {/* Remember me and forgot password */}
           <div className="flex items-center justify-between">
