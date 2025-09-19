@@ -1170,14 +1170,175 @@ app.put('/api/jobs/:jobId/status', authenticateToken, async (req, res) => {
 });
 
 // API v1 라우트 (프론트엔드 호환성을 위한 별칭)
-app.post('/api/v1/auth/register', (req, res) => {
-  // /api/auth/register와 동일한 로직 실행
-  app._router.handle(Object.assign({}, req, { url: '/api/auth/register' }), res);
+app.post('/api/v1/auth/register', async (req, res) => {
+  try {
+    const { email, password, name, userType = 'WORKER' } = req.body;
+
+    if (!email || !password || !name) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields',
+        required: ['email', 'password', 'name'],
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    let user = null;
+    
+    if (prisma) {
+      try {
+        user = await prisma.user.create({
+          data: {
+            email,
+            password: await bcrypt.hash(password, 10),
+            name,
+            userType,
+            verified: false,
+            isActive: true
+          },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            userType: true,
+            verified: true,
+            createdAt: true
+          }
+        });
+      } catch (error) {
+        if (error.code === 'P2002') {
+          return res.status(409).json({
+            success: false,
+            error: 'Email already exists',
+            timestamp: new Date().toISOString()
+          });
+        }
+        throw error;
+      }
+    } else {
+      user = {
+        id: Date.now().toString(),
+        email,
+        name,
+        userType,
+        verified: false,
+        createdAt: new Date().toISOString()
+      };
+    }
+
+    const token = jwt.sign(
+      { userId: user.id },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.status(201).json({
+      success: true,
+      data: { user, token },
+      message: 'User registered successfully',
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('Registration error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
-app.post('/api/v1/auth/login', (req, res) => {
-  // /api/auth/login과 동일한 로직 실행
-  app._router.handle(Object.assign({}, req, { url: '/api/auth/login' }), res);
+app.post('/api/v1/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email and password are required',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    let user = null;
+    
+    if (prisma) {
+      user = await prisma.user.findUnique({
+        where: { email },
+        select: {
+          id: true,
+          email: true,
+          password: true,
+          name: true,
+          userType: true,
+          verified: true,
+          isActive: true,
+          createdAt: true
+        }
+      });
+
+      if (!user || !user.isActive) {
+        return res.status(401).json({
+          success: false,
+          error: 'Invalid email or password',
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      const passwordMatch = await bcrypt.compare(password, user.password);
+      if (!passwordMatch) {
+        return res.status(401).json({
+          success: false,
+          error: 'Invalid email or password',
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      // Remove password from response
+      const { password: _, ...userWithoutPassword } = user;
+      user = userWithoutPassword;
+    } else {
+      // Development mode - basic validation
+      if (email === 'admin@example.com' && password === 'admin123') {
+        user = {
+          id: 'dev-user-1',
+          email: 'admin@example.com',
+          name: 'Admin User',
+          userType: 'EMPLOYER',
+          verified: true,
+          createdAt: new Date().toISOString()
+        };
+      } else {
+        return res.status(401).json({
+          success: false,
+          error: 'Invalid email or password',
+          timestamp: new Date().toISOString()
+        });
+      }
+    }
+
+    const token = jwt.sign(
+      { userId: user.id },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.json({
+      success: true,
+      data: { user, token },
+      message: 'Login successful',
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 app.get('/api/v1/jobs', (req, res) => {

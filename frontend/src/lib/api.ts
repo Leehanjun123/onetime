@@ -14,7 +14,10 @@ async function apiRequest(endpoint: string, options: RequestInit = {}) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+  const url = `${API_BASE_URL}${endpoint}`;
+  console.log('🌐 API Request:', url); // 디버깅용
+
+  const response = await fetch(url, {
     ...options,
     headers,
   });
@@ -22,9 +25,11 @@ async function apiRequest(endpoint: string, options: RequestInit = {}) {
   const data = await response.json();
 
   if (!response.ok) {
+    console.error('❌ API Error:', response.status, url, data);
     throw new Error(data.message || 'API 요청 실패');
   }
 
+  console.log('✅ API Success:', url, data);
   return data;
 }
 
