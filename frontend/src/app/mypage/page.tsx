@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import { userAPI } from '@/lib/api';
 
 interface User {
   id: string;
@@ -69,30 +70,32 @@ export default function MyPage() {
 
   const fetchUserData = async () => {
     try {
-      // 백엔드 API 호출 (추후 실제 API로 교체)
-      // const response = await fetch('https://onetime-production.up.railway.app/api/users/profile', {
-      //   headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      // });
-      // const userData = await response.json();
+      const response = await userAPI.getProfile();
+      const userData = response.data.user;
       
-      // 임시 데이터
-      const mockUser: User = {
-        id: '1',
-        name: '김원데이',
-        email: 'user@oneday.com',
-        phone: '010-1234-5678',
-        userType: 'worker',
-        profileImage: '/api/placeholder/150/150',
-        createdAt: '2025-01-15',
-        birthDate: '1995-08-15',
-        gender: 'male',
-        address: '서울시 강남구',
-        preferredCategories: ['카페/음료', '레스토랑/주방', '이벤트/프로모션'],
-        availableDays: ['월', '화', '수', '목', '금']
+      // API 응답을 프론트엔드 인터페이스에 맞게 변환
+      const user: User = {
+        id: userData.id,
+        name: userData.name,
+        email: userData.email,
+        phone: userData.phone || '',
+        userType: userData.userType?.toLowerCase() as 'worker' | 'employer',
+        profileImage: userData.profileImage || '/api/placeholder/150/150',
+        createdAt: userData.createdAt,
+        // 추가 프로필 정보는 별도 API나 확장 필요
+        birthDate: userData.birthDate,
+        gender: userData.gender,
+        address: userData.address,
+        preferredCategories: userData.preferredCategories || [],
+        availableDays: userData.availableDays || [],
+        // 고용주 정보
+        companyName: userData.companyName,
+        businessNumber: userData.businessNumber,
+        industry: userData.industry
       };
       
-      setUser(mockUser);
-      setEditForm(mockUser);
+      setUser(user);
+      setEditForm(user);
     } catch (error) {
       console.error('Failed to fetch user data:', error);
     }
@@ -100,68 +103,65 @@ export default function MyPage() {
 
   const fetchApplications = async () => {
     try {
-      // 임시 데이터
-      const mockApplications: Application[] = [
-        {
-          id: '1',
-          jobId: '1',
-          jobTitle: '스타벅스 바리스타',
-          company: '스타벅스 강남역점',
-          status: 'approved',
-          appliedAt: '2025-08-28',
-          hourlyPay: 10000,
-          workDate: '2025-08-30',
-          workHours: '09:00-13:00'
-        },
-        {
-          id: '2',
-          jobId: '2',
-          jobTitle: '편의점 야간 근무',
-          company: 'CU 홍대입구점',
-          status: 'pending',
-          appliedAt: '2025-08-29',
-          hourlyPay: 11500
-        }
-      ];
+      const response = await userAPI.getApplications();
+      const applicationsData = response.data;
       
-      setApplications(mockApplications);
+      // API 응답을 프론트엔드 인터페이스에 맞게 변환
+      const applications: Application[] = applicationsData.map((app: any) => ({
+        id: app.id,
+        jobId: app.job.id,
+        jobTitle: app.job.title,
+        company: app.job.employer?.name || '회사명 미제공',
+        status: app.status?.toLowerCase() as 'pending' | 'approved' | 'rejected' | 'completed',
+        appliedAt: app.createdAt,
+        hourlyPay: app.job.wage,
+        workDate: app.job.workDate,
+        workHours: app.job.workHours || '시간 미정'
+      }));
+      
+      setApplications(applications);
     } catch (error) {
       console.error('Failed to fetch applications:', error);
+      // 에러 시 빈 배열로 설정
+      setApplications([]);
     }
   };
 
   const fetchWorkHistory = async () => {
     try {
-      // 임시 데이터
-      const mockHistory: WorkHistory[] = [
-        {
-          id: '1',
-          jobTitle: '카페 알바',
-          company: '투썸플레이스',
-          workDate: '2025-08-25',
-          workHours: '4시간',
-          hourlyPay: 9620,
-          totalPay: 38480,
-          status: 'paid',
-          rating: 5,
-          review: '친절하고 성실한 직원이었습니다.'
-        },
-        {
-          id: '2',
-          jobTitle: '이벤트 도우미',
-          company: '프로모션 에이전시',
-          workDate: '2025-08-20',
-          workHours: '6시간',
-          hourlyPay: 12000,
-          totalPay: 72000,
-          status: 'paid',
-          rating: 4
-        }
-      ];
+      // 완료된 지원 내역에서 근무 이력 생성
+      const response = await userAPI.getApplications();
+      const applicationsData = response.data;
       
-      setWorkHistory(mockHistory);
+      // 완료된(ACCEPTED) 지원만 근무 이력으로 변환
+      const workHistory: WorkHistory[] = applicationsData
+        .filter((app: any) => app.status === 'ACCEPTED')
+        .map((app: any) => {
+          const workHours = app.job.workHours || '시간 미정';
+          const hourlyPay = app.job.wage;
+          // 간단한 총 급여 계산 (실제로는 더 복잡한 로직 필요)
+          const hoursWorked = parseFloat(workHours.replace(/[^0-9.]/g, '')) || 8;
+          const totalPay = hourlyPay * hoursWorked;
+          
+          return {
+            id: app.id,
+            jobTitle: app.job.title,
+            company: app.job.employer?.name || '회사명 미제공',
+            workDate: app.job.workDate,
+            workHours: workHours,
+            hourlyPay: hourlyPay,
+            totalPay: totalPay,
+            status: 'completed' as 'completed' | 'pending_payment' | 'paid',
+            rating: undefined, // 평가 시스템이 구현되면 추가
+            review: undefined
+          };
+        });
+      
+      setWorkHistory(workHistory);
     } catch (error) {
       console.error('Failed to fetch work history:', error);
+      // 에러 시 빈 배열로 설정
+      setWorkHistory([]);
     } finally {
       setIsLoading(false);
     }
@@ -169,15 +169,12 @@ export default function MyPage() {
 
   const handleUpdateProfile = async () => {
     try {
-      // 백엔드 API 호출
-      // const response = await fetch('https://onetime-production.up.railway.app/api/users/profile', {
-      //   method: 'PUT',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //     Authorization: `Bearer ${localStorage.getItem('token')}`
-      //   },
-      //   body: JSON.stringify(editForm)
-      // });
+      const updateData = {
+        name: editForm.name,
+        userType: editForm.userType?.toUpperCase() as 'WORKER' | 'EMPLOYER'
+      };
+      
+      await userAPI.updateProfile(updateData);
       
       setUser({ ...user, ...editForm } as User);
       setIsEditing(false);

@@ -95,7 +95,7 @@ export const jobAPI = {
 // 사용자 API
 export const userAPI = {
   getProfile: () =>
-    apiRequest('/api/auth/me'),
+    apiRequest('/api/users/profile'),
 
   updateProfile: (userData: { name?: string; userType?: 'WORKER' | 'EMPLOYER' }) =>
     apiRequest('/api/users/profile', {

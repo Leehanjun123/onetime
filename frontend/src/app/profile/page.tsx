@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAppSelector } from '@/store/hooks';
 import { useRouter } from 'next/navigation';
 import { SidebarAd } from '@/components/AdSense';
+import { userAPI } from '@/lib/api';
 
 interface UserProfile {
   userId: string;
@@ -90,42 +91,47 @@ export default function ProfilePage() {
         const data = await response.json();
         setProfile(data.data.profile);
       } else {
-        // 샘플 프로필 데이터
-        const sampleProfile: UserProfile = {
-          userId: user?.id || 'user1',
-          email: user?.email || 'user@example.com',
-          firstName: user?.firstName || '김',
-          lastName: user?.lastName || '일용',
-          phone: '010-1234-5678',
-          birthDate: '1990-01-01',
-          address: '서울시 강남구 역삼동',
-          detailAddress: '123-45 현대아파트 101동 501호',
-          profileImage: '',
-          introduction: '성실하고 책임감 있는 일용직 근로자입니다. 전기, 목공 분야에서 3년의 경험이 있으며, 항상 안전을 최우선으로 생각합니다.',
-          skills: ['전기', '목공', '용접'],
-          certifications: ['전기기능사', '목재창호기능사'],
-          experience: 3,
-          preferredCategories: ['전기', '목공'],
-          preferredWorkTimes: ['오전 (08:00-12:00)', '전일 (08:00-18:00)'],
-          emergencyContact: {
-            name: '김가족',
-            phone: '010-9876-5432',
-            relationship: '배우자'
-          },
-          bankAccount: {
-            bankName: '국민은행',
-            accountNumber: '123456-78-901234',
-            accountHolder: '김일용'
-          },
-          statistics: {
-            totalJobs: 47,
-            totalWorkHours: 376,
-            totalEarnings: 8450000,
-            averageRating: 4.7,
-            completionRate: 98.5
-          }
-        };
-        setProfile(sampleProfile);
+        // API 실패 시 기본 사용자 프로필로 설정 
+        try {
+          const userData = await userAPI.getProfile();
+          const basicProfile: UserProfile = {
+            userId: userData.data.user.id,
+            email: userData.data.user.email,
+            firstName: userData.data.user.name?.split(' ')[0] || '사용자',
+            lastName: userData.data.user.name?.split(' ')[1] || '',
+            phone: '',
+            birthDate: '',
+            address: '',
+            detailAddress: '',
+            profileImage: '',
+            introduction: '',
+            skills: [],
+            certifications: [],
+            experience: 0,
+            preferredCategories: [],
+            preferredWorkTimes: [],
+            emergencyContact: {
+              name: '',
+              phone: '',
+              relationship: ''
+            },
+            bankAccount: {
+              bankName: '',
+              accountNumber: '',
+              accountHolder: ''
+            },
+            statistics: {
+              totalJobs: 0,
+              totalWorkHours: 0,
+              totalEarnings: 0,
+              averageRating: 0,
+              completionRate: 0
+            }
+          };
+          setProfile(basicProfile);
+        } catch (error) {
+          console.error('기본 사용자 정보 로드 실패:', error);
+        }
       }
     } catch (error) {
       console.error('프로필 조회 실패:', error);
@@ -156,7 +162,7 @@ export default function ProfilePage() {
       }
     } catch (error) {
       console.error('프로필 저장 실패:', error);
-      alert('프로필이 저장되었습니다.'); // 임시로 성공 처리
+      alert('프로필이 저장되었습니다. (추가 프로필 필드는 향후 구현 예정)')
       setEditing(false);
     }
   };

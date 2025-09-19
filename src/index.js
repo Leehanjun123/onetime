@@ -581,6 +581,54 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
   }
 });
 
+// 사용자 프로필 조회 (인증 필요)
+app.get('/api/users/profile', authenticateToken, async (req, res) => {
+  try {
+    if (!prisma) {
+      return res.status(503).json({
+        success: false,
+        error: 'Database not available',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        userType: true,
+        verified: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    res.json({
+      success: true,
+      data: { user },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Get user profile error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get user profile',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // 사용자 프로필 업데이트 (인증 필요)
 app.put('/api/users/profile', authenticateToken, async (req, res) => {
   try {

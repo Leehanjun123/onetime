@@ -82,83 +82,8 @@ export default function ReviewsPage() {
         const data = await response.json();
         setReviews(data.data.reviews);
       } else {
-        // API 실패 시 샘플 데이터
-        const sampleReviews: Review[] = [
-          {
-            id: '1',
-            jobId: 'job1',
-            jobTitle: '아파트 전기 배선 작업',
-            company: '한빛전기',
-            reviewerId: 'employer1',
-            reviewerName: '김사장',
-            targetUserId: user?.id || 'user1',
-            targetUserName: '박기술자',
-            targetUserType: 'WORKER',
-            rating: 4.5,
-            comment: '작업 실력이 정말 뛰어나십니다. 시간도 정확히 지켜주시고 안전수칙도 철저히 준수해주셨어요. 다음에도 꼭 함께 작업하고 싶습니다.',
-            workQuality: 5,
-            communication: 4,
-            punctuality: 5,
-            safety: 5,
-            workDate: '2025-08-29',
-            createdAt: new Date().toISOString(),
-            isAnonymous: false
-          },
-          {
-            id: '2',
-            jobId: 'job2',
-            jobTitle: '원룸 도배 작업',
-            company: '청솔도배',
-            reviewerId: 'employer2',
-            reviewerName: '익명',
-            targetUserId: user?.id || 'user1',
-            targetUserName: '박기술자',
-            targetUserType: 'WORKER',
-            rating: 4.0,
-            comment: '깔끔하고 꼼꼼하게 작업해주셨습니다. 소통도 원활했어요.',
-            workQuality: 4,
-            communication: 5,
-            punctuality: 4,
-            safety: 3,
-            workDate: '2025-08-28',
-            createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-            isAnonymous: true
-          },
-          {
-            id: '3',
-            jobId: 'job3',
-            jobTitle: '상가 철거 작업',
-            company: '대한철거',
-            reviewerId: 'employer3',
-            reviewerName: '이사장',
-            targetUserId: user?.id || 'user1',
-            targetUserName: '박기술자',
-            targetUserType: 'WORKER',
-            rating: 3.5,
-            comment: '열심히 하시는 모습이 좋았지만, 약간의 지각이 있었습니다.',
-            workQuality: 4,
-            communication: 3,
-            punctuality: 2,
-            safety: 4,
-            workDate: '2025-08-27',
-            createdAt: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(),
-            isAnonymous: false
-          }
-        ];
-
-        if (selectedTab === 'received') {
-          setReviews(sampleReviews);
-        } else {
-          // 내가 작성한 리뷰 (역할을 바꿔서 표시)
-          setReviews(sampleReviews.map(review => ({
-            ...review,
-            reviewerId: user?.id || 'user1',
-            reviewerName: '나',
-            targetUserId: review.reviewerId,
-            targetUserName: review.reviewerName,
-            targetUserType: 'EMPLOYER' as const
-          })));
-        }
+        // 리뷰 시스템은 현재 개발 중입니다
+        setReviews([]);
       }
     } catch (error) {
       console.error('리뷰 조회 실패:', error);
@@ -180,18 +105,8 @@ export default function ReviewsPage() {
         const data = await response.json();
         setMyStats(data.data);
       } else {
-        // 샘플 통계
-        setMyStats({
-          averageRating: 4.0,
-          totalReviews: 3,
-          ratingDistribution: { 5: 1, 4: 1, 3: 1, 2: 0, 1: 0 },
-          categoryAverages: {
-            workQuality: 4.3,
-            communication: 4.0,
-            punctuality: 3.7,
-            safety: 4.0
-          }
-        });
+        // 리뷰 시스템은 현재 개발 중입니다
+        setMyStats(null);
       }
     } catch (error) {
       console.error('통계 조회 실패:', error);
@@ -426,18 +341,15 @@ export default function ReviewsPage() {
               </div>
             ) : reviews.length === 0 ? (
               <div className="text-center py-8">
-                <div className="text-4xl mb-4">⭐</div>
+                <div className="text-4xl mb-4">🚧</div>
                 <h3 className="text-lg font-bold text-gray-900 mb-2">
-                  {selectedTab === 'received' ? '받은 리뷰가 없습니다' : '작성한 리뷰가 없습니다'}
+                  리뷰 시스템 개발 중
                 </h3>
                 <p className="text-gray-600 mb-6">
-                  {selectedTab === 'received' 
-                    ? '일용직 작업을 완료하면 고용주로부터 리뷰를 받을 수 있습니다.'
-                    : '완료된 작업에 대해 리뷰를 작성해보세요.'
-                  }
+                  리뷰 및 평가 시스템이 현재 개발 중입니다. 곧 만나보실 수 있습니다.
                 </p>
                 <a
-                  href="/jobs/nearby"
+                  href="/jobs"
                   className="inline-block bg-orange-600 text-white px-6 py-3 rounded-lg hover:bg-orange-700"
                 >
                   일자리 찾기

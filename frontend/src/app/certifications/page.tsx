@@ -62,7 +62,8 @@ export default function CertificationsPage() {
         setCertifications(data.data.certifications);
       } else {
         // 샘플 인증 데이터
-        const sampleCertifications: Certification[] = [
+        // 자격증 시스템은 현재 개발 중입니다
+        setCertifications([]);
           {
             id: '1',
             name: '전기 기초 인증',
@@ -224,7 +225,8 @@ export default function CertificationsPage() {
         setUserCertifications(data.data.userCertifications);
       } else {
         // 샘플 사용자 인증 데이터
-        const sampleUserCertifications: UserCertification[] = [
+        // 사용자 자격증 데이터는 현재 개발 중입니다
+        setUserCertifications([]);
           {
             certificationId: '1',
             certification: {

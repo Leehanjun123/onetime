@@ -76,15 +76,9 @@ export default function PortfolioPage() {
         const data = await response.json();
         setPortfolio(data.data.portfolio);
       } else {
-        // 샘플 포트폴리오 데이터
-        const samplePortfolio: Portfolio = {
-          userId: user?.id || 'user1',
-          totalExperience: 36, // 3년
-          totalProjects: 47,
-          totalEarnings: 8450000,
-          averageRating: 4.7,
-          specialties: ['전기', '목공', '용접'],
-          workExperiences: [
+        // 포트폴리오 시스템은 현재 개발 중입니다
+        setPortfolio(null);
+      }
             {
               id: '1',
               jobTitle: '아파트 전기 배선 작업',

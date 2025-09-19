@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAppSelector } from '@/store/hooks';
 import { useRouter } from 'next/navigation';
+import { jobAPI } from '@/lib/api';
 
 interface JobDetail {
   id: string;
@@ -35,38 +36,6 @@ interface JobDetail {
   safetyInfo: string[];
 }
 
-// 샘플 일자리 상세 데이터 - 20개 모두 포함
-const sampleJobDetails: { [key: string]: JobDetail } = {
-  '1': {
-    id: '1',
-    title: '아파트 전기 배선 작업',
-    company: '한빛전기',
-    location: '서울시 강남구 역삼동',
-    latitude: 37.5006,
-    longitude: 127.0366,
-    wage: 180000,
-    wageType: 'DAILY',
-    category: '전기',
-    workDate: '2025-08-31',
-    workTime: '09:00-18:00',
-    isUrgent: true,
-    requiredWorkers: 2,
-    appliedWorkers: 1,
-    description: '아파트 리모델링을 위한 전기 배선 작업입니다. 기존 배선을 제거하고 새로운 배선을 설치하는 업무를 담당하게 됩니다. 전기 작업 경험이 있는 분을 우대하며, 안전 수칙을 철저히 준수해야 합니다.',
-    requirements: [
-      '전기 관련 자격증 보유자 우대',
-      '전기 작업 경험 1년 이상',
-      '안전 교육 이수자',
-      '체력적으로 건강한 분'
-    ],
-    benefits: [
-      '당일 정산 가능',
-      '교통비 별도 지급',
-      '중식 제공',
-      '안전 장비 제공'
-    ],
-    contactPerson: '김현수 팀장',
-    contactPhone: '010-1234-5678',
     companyInfo: {
       name: '한빛전기',
       rating: 4.8,
@@ -184,43 +153,48 @@ export default function JobDetailPage({ params }: { params: { id: string } }) {
   const fetchJobDetail = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`https://onetime-production.up.railway.app/api/v1/jobs/${params.id}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setJobDetail(data.data.job);
-        }
+      const response = await jobAPI.getJobById(params.id);
+      if (response.success && response.data) {
+        // API 응답을 JobDetail 인터페이스에 맞게 변환
+        const jobData = response.data;
+        const jobDetail: JobDetail = {
+          id: jobData.id,
+          title: jobData.title,
+          company: jobData.employer?.name || '회사명 미제공',
+          location: jobData.location,
+          latitude: 37.5665, // 기본값 (서울시청)
+          longitude: 126.9780,
+          wage: jobData.wage,
+          wageType: 'HOURLY' as const,
+          category: jobData.category,
+          workDate: jobData.workDate,
+          workTime: jobData.workHours || '시간 미정',
+          isUrgent: false,
+          requiredWorkers: 1,
+          appliedWorkers: jobData.applications?.length || 0,
+          description: jobData.description,
+          requirements: [],
+          benefits: [],
+          contactPerson: jobData.employer?.name || '담당자 미정',
+          contactPhone: jobData.employer?.phone || '연락처 미정',
+          companyInfo: {
+            name: jobData.employer?.name || '회사명 미제공',
+            rating: 0,
+            totalJobs: 0,
+            description: '회사 정보가 제공되지 않았습니다.'
+          },
+          workAddress: jobData.location,
+          tools: [],
+          safetyInfo: []
+        };
+        setJobDetail(jobDetail);
       } else {
-        // API 실패 시 샘플 데이터 사용
-        const sampleJob = sampleJobDetails[params.id];
-        if (sampleJob) {
-          setJobDetail(sampleJob);
-        } else {
-          // 기본 샘플 데이터를 기반으로 ID별 고유 데이터 생성
-          const baseJob = sampleJobDetails['1'];
-          setJobDetail({
-            ...baseJob,
-            id: params.id,
-            title: `일자리 ${params.id}번`,
-            appliedWorkers: Math.floor(Math.random() * 3),
-          });
-        }
+        console.error('일자리 정보를 찾을 수 없습니다.');
+        router.push('/jobs');
       }
     } catch (error) {
       console.error('일자리 상세 조회 실패:', error);
-      
-      // 에러 시 샘플 데이터 사용
-      const sampleJob = sampleJobDetails[params.id] || sampleJobDetails['1'];
-      setJobDetail({
-        ...sampleJob,
-        id: params.id
-      });
+      router.push('/jobs');
     } finally {
       setLoading(false);
     }
