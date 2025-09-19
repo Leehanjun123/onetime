@@ -22,6 +22,10 @@ model User {
   // 관계
   jobs         Job[]
   applications JobApplication[]
+  resume       Resume?
+  company      Company?
+  reviewsGiven     Review[] @relation("ReviewsGiven")
+  reviewsReceived  Review[] @relation("ReviewsReceived")
 
   @@map("users")
 }
@@ -35,6 +39,7 @@ model Job {
   location    String
   wage        Int       // 시급
   workDate    DateTime
+  workHours   String?   // 근무 시간 (예: 09:00-18:00)
   status      JobStatus @default(OPEN)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -43,6 +48,7 @@ model Job {
   employer     User             @relation(fields: [employerId], references: [id])
   employerId   String
   applications JobApplication[]
+  reviews      Review[]
 
   @@map("jobs")
 }
@@ -64,6 +70,147 @@ model JobApplication {
   @@map("job_applications")
 }
 
+// 이력서 모델
+model Resume {
+  id        String   @id @default(cuid())
+  title     String?  // 이력서 제목
+  summary   String?  // 자기소개
+  phone     String?  // 연락처
+  address   String?  // 주소
+  birthDate DateTime?// 생년월일
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 관계
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          String           @unique
+  workExperiences WorkExperience[]
+  educations      Education[]
+  skills          Skill[]
+
+  @@map("resumes")
+}
+
+// 경력 모델
+model WorkExperience {
+  id          String    @id @default(cuid())
+  company     String    // 회사명
+  position    String    // 직책
+  description String?   // 업무 설명
+  startDate   DateTime  // 시작일
+  endDate     DateTime? // 종료일 (현재 근무중이면 null)
+  isCurrent   Boolean   @default(false) // 현재 근무중 여부
+  createdAt   DateTime  @default(now())
+
+  // 관계
+  resume   Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  resumeId String
+
+  @@map("work_experiences")
+}
+
+// 학력 모델
+model Education {
+  id           String       @id @default(cuid())
+  school       String       // 학교명
+  major        String?      // 전공
+  degree       EducationLevel // 학위
+  startDate    DateTime     // 입학일
+  endDate      DateTime?    // 졸업일
+  isGraduated  Boolean      @default(false) // 졸업 여부
+  gpa          Float?       // 학점
+  maxGpa       Float?       // 만점
+  createdAt    DateTime     @default(now())
+
+  // 관계
+  resume   Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  resumeId String
+
+  @@map("educations")
+}
+
+// 스킬 모델
+model Skill {
+  id        String    @id @default(cuid())
+  name      String    // 스킬명
+  level     SkillLevel // 숙련도
+  category  String?   // 카테고리 (예: 언어, 도구, 프레임워크)
+  createdAt DateTime  @default(now())
+
+  // 관계
+  resume   Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  resumeId String
+
+  @@map("skills")
+}
+
+// 회사 모델
+model Company {
+  id                  String                @id @default(cuid())
+  businessName        String                // 사업자명
+  businessNumber      String    @unique     // 사업자번호
+  ceoName             String                // 대표자명
+  businessType        String?               // 업종
+  businessAddress     String?               // 사업장 주소
+  phoneNumber         String?               // 회사 전화번호
+  email               String?               // 회사 이메일
+  website             String?               // 웹사이트
+  establishedDate     DateTime?             // 설립일
+  employeeCount       Int?                  // 직원수
+  description         String?               // 회사 소개
+  verificationStatus  VerificationStatus    @default(PENDING) // 인증 상태
+  verifiedAt          DateTime?             // 인증 완료일
+  rejectedReason      String?               // 인증 거절 사유
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+
+  // 관계
+  user                User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId              String                @unique
+  verificationDocs    VerificationDocument[]
+
+  @@map("companies")
+}
+
+// 인증 서류 모델
+model VerificationDocument {
+  id          String      @id @default(cuid())
+  type        DocumentType // 서류 유형
+  fileName    String      // 파일명
+  filePath    String      // 파일 경로
+  fileSize    Int?        // 파일 크기
+  mimeType    String?     // MIME 타입
+  uploadedAt  DateTime    @default(now())
+
+  // 관계
+  company     Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId   String
+
+  @@map("verification_documents")
+}
+
+// 리뷰 모델
+model Review {
+  id          String     @id @default(cuid())
+  rating      Int        // 평점 (1-5)
+  comment     String?    // 리뷰 내용
+  reviewType  ReviewType // 리뷰 타입 (고용주->근로자, 근로자->고용주)
+  isPublic    Boolean    @default(true) // 공개 여부
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  // 관계
+  job         Job        @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  jobId       String
+  reviewer    User       @relation("ReviewsGiven", fields: [reviewerId], references: [id])
+  reviewerId  String     // 리뷰 작성자
+  reviewee    User       @relation("ReviewsReceived", fields: [revieweeId], references: [id])
+  revieweeId  String     // 리뷰 대상자
+
+  @@unique([jobId, reviewerId, revieweeId]) // 같은 일자리에서 같은 사람끼리는 한 번만 리뷰 가능
+  @@map("reviews")
+}
+
 // Enums
 enum UserType {
   WORKER
@@ -80,4 +227,41 @@ enum ApplicationStatus {
   PENDING
   ACCEPTED
   REJECTED
+}
+
+enum EducationLevel {
+  HIGH_SCHOOL      // 고등학교
+  ASSOCIATE        // 전문대학 
+  BACHELOR         // 학사
+  MASTER           // 석사
+  DOCTORATE        // 박사
+  OTHER            // 기타
+}
+
+enum SkillLevel {
+  BEGINNER         // 초급
+  INTERMEDIATE     // 중급
+  ADVANCED         // 고급
+  EXPERT           // 전문가
+}
+
+enum VerificationStatus {
+  PENDING          // 인증 대기
+  APPROVED         // 인증 승인
+  REJECTED         // 인증 거절
+  UNDER_REVIEW     // 검토 중
+}
+
+enum DocumentType {
+  BUSINESS_LICENSE // 사업자등록증
+  CORPORATE_SEAL   // 법인인감증명서
+  BANK_ACCOUNT     // 통장사본
+  TAX_INVOICE      // 부가세신고서
+  COMPANY_PROFILE  // 회사소개서
+  OTHER            // 기타
+}
+
+enum ReviewType {
+  EMPLOYER_TO_WORKER // 고용주가 근로자에게
+  WORKER_TO_EMPLOYER // 근로자가 고용주에게
 }

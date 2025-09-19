@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAppSelector } from '@/store/hooks';
 import { useRouter } from 'next/navigation';
-import { jobAPI } from '@/lib/api';
+import { jobAPI, applicationAPI } from '@/lib/api';
 
 interface JobDetail {
   id: string;
@@ -23,10 +23,13 @@ interface JobDetail {
 }
 
 export default function JobDetailPage({ params }: { params: { id: string } }) {
-  const { isAuthenticated } = useAppSelector((state) => state.auth);
+  const { isAuthenticated, user } = useAppSelector((state) => state.auth);
   const router = useRouter();
   const [jobDetail, setJobDetail] = useState<JobDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [applying, setApplying] = useState(false);
+  const [showApplyModal, setShowApplyModal] = useState(false);
+  const [applicationMessage, setApplicationMessage] = useState('');
 
   useEffect(() => {
     fetchJobDetail();
@@ -70,6 +73,38 @@ export default function JobDetailPage({ params }: { params: { id: string } }) {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('ko-KR');
+  };
+
+  const handleApply = async () => {
+    if (!isAuthenticated) {
+      router.push('/login');
+      return;
+    }
+
+    setApplying(true);
+    try {
+      await applicationAPI.applyToJob(params.id, {
+        message: applicationMessage
+      });
+      
+      alert('지원이 완료되었습니다!');
+      setShowApplyModal(false);
+      setApplicationMessage('');
+      // 페이지 새로고침하여 지원 상태 업데이트
+      fetchJobDetail();
+    } catch (error) {
+      console.error('지원 실패:', error);
+      alert('지원에 실패했습니다. 다시 시도해주세요.');
+    } finally {
+      setApplying(false);
+    }
+  };
+
+  const canApply = () => {
+    if (!isAuthenticated || !user || !jobDetail) return false;
+    if (user.userType !== 'WORKER') return false;
+    if (jobDetail.employer?.id === user.id) return false;
+    return true;
   };
 
   if (loading) {
@@ -144,19 +179,77 @@ export default function JobDetailPage({ params }: { params: { id: string } }) {
               <p className="text-gray-700">{jobDetail.description}</p>
             </div>
 
-            {isAuthenticated && (
-              <div className="flex justify-end">
+            <div className="flex justify-between items-center">
+              <button
+                onClick={() => router.push('/jobs')}
+                className="bg-gray-600 text-white px-6 py-2 rounded-md hover:bg-gray-700"
+              >
+                목록으로 돌아가기
+              </button>
+              
+              {canApply() && (
                 <button
-                  onClick={() => router.push('/jobs')}
+                  onClick={() => setShowApplyModal(true)}
+                  className="bg-indigo-600 text-white px-6 py-2 rounded-md hover:bg-indigo-700 font-semibold"
+                >
+                  지원하기
+                </button>
+              )}
+              
+              {!isAuthenticated && (
+                <button
+                  onClick={() => router.push('/login')}
                   className="bg-indigo-600 text-white px-6 py-2 rounded-md hover:bg-indigo-700"
                 >
-                  목록으로 돌아가기
+                  로그인 후 지원하기
                 </button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       </div>
+
+      {/* 지원 모달 */}
+      {showApplyModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">일자리 지원</h3>
+            <p className="text-gray-600 mb-4">
+              <strong>{jobDetail?.title}</strong>에 지원하시겠습니까?
+            </p>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                지원 메시지 (선택사항)
+              </label>
+              <textarea
+                value={applicationMessage}
+                onChange={(e) => setApplicationMessage(e.target.value)}
+                placeholder="자기소개나 특별한 사항이 있으면 작성해주세요."
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                rows={4}
+              />
+            </div>
+
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setShowApplyModal(false)}
+                className="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300"
+                disabled={applying}
+              >
+                취소
+              </button>
+              <button
+                onClick={handleApply}
+                disabled={applying}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50"
+              >
+                {applying ? '지원 중...' : '지원하기'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -790,7 +790,7 @@ app.get('/api/users/jobs', authenticateToken, async (req, res) => {
 // 일자리 생성 API (인증 필요)
 app.post('/api/jobs', authenticateToken, async (req, res) => {
   try {
-    const { title, description, category, location, wage, workDate } = req.body;
+    const { title, description, category, location, wage, workDate, workHours } = req.body;
 
     // 기본 필수 필드 검증
     if (!title || !description || !category || !location || !wage || !workDate) {
@@ -877,6 +877,7 @@ app.post('/api/jobs', authenticateToken, async (req, res) => {
         location,
         wage: parseInt(wage),
         workDate: new Date(workDate),
+        workHours: workHours || null,
         employerId: req.userId,
         status: 'OPEN'
       },
@@ -1121,6 +1122,75 @@ app.put('/api/applications/:applicationId/status', authenticateToken, async (req
     res.status(500).json({
       success: false,
       error: 'Failed to update application status',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// 일자리별 지원자 목록 조회 (고용주용)
+app.get('/api/jobs/:jobId/applications', authenticateToken, async (req, res) => {
+  try {
+    const { jobId } = req.params;
+
+    if (!prisma) {
+      return res.status(503).json({
+        success: false,
+        error: 'Database not available',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // 일자리 존재 및 소유자 확인
+    const job = await prisma.job.findUnique({
+      where: { id: jobId },
+      select: { employerId: true, title: true }
+    });
+
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        error: 'Job not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    if (job.employerId !== req.userId) {
+      return res.status(403).json({
+        success: false,
+        error: 'Only job owner can view applications',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // 지원자 목록 조회
+    const applications = await prisma.jobApplication.findMany({
+      where: { jobId },
+      include: {
+        worker: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            userType: true
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    res.json({
+      success: true,
+      data: applications,
+      total: applications.length,
+      jobTitle: job.title,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Get job applications error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get job applications',
       message: error.message,
       timestamp: new Date().toISOString()
     });
@@ -1402,13 +1472,1698 @@ app.post('/api/v1/jobs/:jobId/apply', (req, res) => {
 });
 
 // 404 핸들러
+// ========================
+// 이력서 API
+// ========================
+
+// 내 이력서 조회
+app.get('/api/users/resume', authenticateToken, async (req, res) => {
+  try {
+    if (!prisma) {
+      return res.status(503).json({
+        success: false,
+        error: 'Database not available',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const resume = await prisma.resume.findUnique({
+      where: { userId: req.userId },
+      include: {
+        workExperiences: {
+          orderBy: { startDate: 'desc' }
+        },
+        educations: {
+          orderBy: { startDate: 'desc' }
+        },
+        skills: {
+          orderBy: { category: 'asc' }
+        }
+      }
+    });
+
+    res.json({
+      success: true,
+      data: resume,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Get resume error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get resume',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// 이력서 생성/업데이트
+app.post('/api/users/resume', authenticateToken, async (req, res) => {
+  try {
+    const { title, summary, phone, address, birthDate } = req.body;
+
+    if (!prisma) {
+      return res.status(503).json({
+        success: false,
+        error: 'Database not available',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const resumeData = {
+      title,
+      summary,
+      phone,
+      address,
+      birthDate: birthDate ? new Date(birthDate) : null
+    };
+
+    // upsert: 존재하면 업데이트, 없으면 생성
+    const resume = await prisma.resume.upsert({
+      where: { userId: req.userId },
+      update: resumeData,
+      create: {
+        ...resumeData,
+        userId: req.userId
+      },
+      include: {
+        workExperiences: {
+          orderBy: { startDate: 'desc' }
+        },
+        educations: {
+          orderBy: { startDate: 'desc' }
+        },
+        skills: {
+          orderBy: { category: 'asc' }
+        }
+      }
+    });
+
+    res.json({
+      success: true,
+      data: resume,
+      message: 'Resume saved successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Save resume error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to save resume',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// 경력 추가
+app.post('/api/users/resume/work-experiences', authenticateToken, async (req, res) => {
+  try {
+    const { company, position, description, startDate, endDate, isCurrent } = req.body;
+
+    if (!company || !position || !startDate) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields',
+        required: ['company', 'position', 'startDate'],
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    if (!prisma) {
+      return res.status(503).json({
+        success: false,
+        error: 'Database not available',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // 이력서가 없으면 먼저 생성
+    await prisma.resume.upsert({
+      where: { userId: req.userId },
+      update: {},
+      create: { userId: req.userId }
+    });
+
+    const workExperience = await prisma.workExperience.create({
+      data: {
+        company,
+        position,
+        description,
+        startDate: new Date(startDate),
+        endDate: endDate ? new Date(endDate) : null,
+        isCurrent: isCurrent || false,
+        resume: {
+          connect: { userId: req.userId }
+        }
+      }
+    });
+
+    res.json({
+      success: true,
+      data: workExperience,
+      message: 'Work experience added successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Add work experience error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to add work experience',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// 경력 수정
+app.put('/api/users/resume/work-experiences/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { company, position, description, startDate, endDate, isCurrent } = req.body;
+
+    if (!prisma) {
+      return res.status(503).json({
+        success: false,
+        error: 'Database not available',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // 권한 확인
+    const workExperience = await prisma.workExperience.findFirst({
+      where: {
+        id,
+        resume: { userId: req.userId }
+      }
+    });
+
+    if (!workExperience) {
+      return res.status(404).json({
+        success: false,
+        error: 'Work experience not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const updatedWorkExperience = await prisma.workExperience.update({
+      where: { id },
+      data: {
+        company,
+        position,
+        description,
+        startDate: startDate ? new Date(startDate) : undefined,
+        endDate: endDate ? new Date(endDate) : null,
+        isCurrent: isCurrent !== undefined ? isCurrent : undefined
+      }
+    });
+
+    res.json({
+      success: true,
+      data: updatedWorkExperience,
+      message: 'Work experience updated successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Update work experience error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update work experience',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// 경력 삭제
+app.delete('/api/users/resume/work-experiences/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!prisma) {
+      return res.status(503).json({
+        success: false,
+        error: 'Database not available',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // 권한 확인
+    const workExperience = await prisma.workExperience.findFirst({
+      where: {
+        id,
+        resume: { userId: req.userId }
+      }
+    });
+
+    if (!workExperience) {
+      return res.status(404).json({
+        success: false,
+        error: 'Work experience not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    await prisma.workExperience.delete({
+      where: { id }
+    });
+
+    res.json({
+      success: true,
+      message: 'Work experience deleted successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Delete work experience error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete work experience',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// 학력 추가
+app.post('/api/users/resume/educations', authenticateToken, async (req, res) => {
+  try {
+    const { school, major, degree, startDate, endDate, isGraduated, gpa, maxGpa } = req.body;
+
+    if (!school || !degree || !startDate) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields',
+        required: ['school', 'degree', 'startDate'],
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    if (!prisma) {
+      return res.status(503).json({
+        success: false,
+        error: 'Database not available',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // 이력서가 없으면 먼저 생성
+    await prisma.resume.upsert({
+      where: { userId: req.userId },
+      update: {},
+      create: { userId: req.userId }
+    });
+
+    const education = await prisma.education.create({
+      data: {
+        school,
+        major,
+        degree,
+        startDate: new Date(startDate),
+        endDate: endDate ? new Date(endDate) : null,
+        isGraduated: isGraduated || false,
+        gpa: gpa ? parseFloat(gpa) : null,
+        maxGpa: maxGpa ? parseFloat(maxGpa) : null,
+        resume: {
+          connect: { userId: req.userId }
+        }
+      }
+    });
+
+    res.json({
+      success: true,
+      data: education,
+      message: 'Education added successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Add education error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to add education',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// 학력 수정
+app.put('/api/users/resume/educations/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { school, major, degree, startDate, endDate, isGraduated, gpa, maxGpa } = req.body;
+
+    if (!prisma) {
+      return res.status(503).json({
+        success: false,
+        error: 'Database not available',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // 권한 확인
+    const education = await prisma.education.findFirst({
+      where: {
+        id,
+        resume: { userId: req.userId }
+      }
+    });
+
+    if (!education) {
+      return res.status(404).json({
+        success: false,
+        error: 'Education not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const updatedEducation = await prisma.education.update({
+      where: { id },
+      data: {
+        school,
+        major,
+        degree,
+        startDate: startDate ? new Date(startDate) : undefined,
+        endDate: endDate ? new Date(endDate) : null,
+        isGraduated: isGraduated !== undefined ? isGraduated : undefined,
+        gpa: gpa ? parseFloat(gpa) : null,
+        maxGpa: maxGpa ? parseFloat(maxGpa) : null
+      }
+    });
+
+    res.json({
+      success: true,
+      data: updatedEducation,
+      message: 'Education updated successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Update education error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update education',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// 학력 삭제
+app.delete('/api/users/resume/educations/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!prisma) {
+      return res.status(503).json({
+        success: false,
+        error: 'Database not available',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // 권한 확인
+    const education = await prisma.education.findFirst({
+      where: {
+        id,
+        resume: { userId: req.userId }
+      }
+    });
+
+    if (!education) {
+      return res.status(404).json({
+        success: false,
+        error: 'Education not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    await prisma.education.delete({
+      where: { id }
+    });
+
+    res.json({
+      success: true,
+      message: 'Education deleted successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Delete education error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete education',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// 스킬 추가
+app.post('/api/users/resume/skills', authenticateToken, async (req, res) => {
+  try {
+    const { name, level, category } = req.body;
+
+    if (!name || !level) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields',
+        required: ['name', 'level'],
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    if (!prisma) {
+      return res.status(503).json({
+        success: false,
+        error: 'Database not available',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // 이력서가 없으면 먼저 생성
+    await prisma.resume.upsert({
+      where: { userId: req.userId },
+      update: {},
+      create: { userId: req.userId }
+    });
+
+    const skill = await prisma.skill.create({
+      data: {
+        name,
+        level,
+        category,
+        resume: {
+          connect: { userId: req.userId }
+        }
+      }
+    });
+
+    res.json({
+      success: true,
+      data: skill,
+      message: 'Skill added successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Add skill error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to add skill',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// 스킬 수정
+app.put('/api/users/resume/skills/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, level, category } = req.body;
+
+    if (!prisma) {
+      return res.status(503).json({
+        success: false,
+        error: 'Database not available',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // 권한 확인
+    const skill = await prisma.skill.findFirst({
+      where: {
+        id,
+        resume: { userId: req.userId }
+      }
+    });
+
+    if (!skill) {
+      return res.status(404).json({
+        success: false,
+        error: 'Skill not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const updatedSkill = await prisma.skill.update({
+      where: { id },
+      data: {
+        name,
+        level,
+        category
+      }
+    });
+
+    res.json({
+      success: true,
+      data: updatedSkill,
+      message: 'Skill updated successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Update skill error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update skill',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// 스킬 삭제
+app.delete('/api/users/resume/skills/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!prisma) {
+      return res.status(503).json({
+        success: false,
+        error: 'Database not available',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // 권한 확인
+    const skill = await prisma.skill.findFirst({
+      where: {
+        id,
+        resume: { userId: req.userId }
+      }
+    });
+
+    if (!skill) {
+      return res.status(404).json({
+        success: false,
+        error: 'Skill not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    await prisma.skill.delete({
+      where: { id }
+    });
+
+    res.json({
+      success: true,
+      message: 'Skill deleted successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Delete skill error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete skill',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// ========================
+// 회사 인증 API
+// ========================
+
+// 내 회사 정보 조회
+app.get('/api/users/company', authenticateToken, async (req, res) => {
+  try {
+    if (!prisma) {
+      return res.status(503).json({
+        success: false,
+        error: 'Database not available',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const company = await prisma.company.findUnique({
+      where: { userId: req.userId },
+      include: {
+        verificationDocs: {
+          orderBy: { uploadedAt: 'desc' }
+        }
+      }
+    });
+
+    res.json({
+      success: true,
+      data: company,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Get company error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get company information',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// 회사 정보 등록/업데이트
+app.post('/api/users/company', authenticateToken, async (req, res) => {
+  try {
+    const {
+      businessName,
+      businessNumber,
+      ceoName,
+      businessType,
+      businessAddress,
+      phoneNumber,
+      email,
+      website,
+      establishedDate,
+      employeeCount,
+      description
+    } = req.body;
+
+    if (!businessName || !businessNumber || !ceoName) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields',
+        required: ['businessName', 'businessNumber', 'ceoName'],
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    if (!prisma) {
+      return res.status(503).json({
+        success: false,
+        error: 'Database not available',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const companyData = {
+      businessName,
+      businessNumber,
+      ceoName,
+      businessType,
+      businessAddress,
+      phoneNumber,
+      email,
+      website,
+      establishedDate: establishedDate ? new Date(establishedDate) : null,
+      employeeCount: employeeCount ? parseInt(employeeCount) : null,
+      description
+    };
+
+    // upsert: 존재하면 업데이트, 없으면 생성
+    const company = await prisma.company.upsert({
+      where: { userId: req.userId },
+      update: companyData,
+      create: {
+        ...companyData,
+        userId: req.userId,
+        verificationStatus: 'PENDING'
+      },
+      include: {
+        verificationDocs: {
+          orderBy: { uploadedAt: 'desc' }
+        }
+      }
+    });
+
+    res.json({
+      success: true,
+      data: company,
+      message: 'Company information saved successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Save company error:', error);
+    if (error.code === 'P2002') {
+      return res.status(409).json({
+        success: false,
+        error: 'Business number already exists',
+        timestamp: new Date().toISOString()
+      });
+    }
+    res.status(500).json({
+      success: false,
+      error: 'Failed to save company information',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// 인증 서류 업로드 정보 저장 (실제 파일 업로드는 별도 처리)
+app.post('/api/users/company/documents', authenticateToken, async (req, res) => {
+  try {
+    const { type, fileName, filePath, fileSize, mimeType } = req.body;
+
+    if (!type || !fileName || !filePath) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields',
+        required: ['type', 'fileName', 'filePath'],
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    if (!prisma) {
+      return res.status(503).json({
+        success: false,
+        error: 'Database not available',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // 회사 정보가 없으면 먼저 생성
+    const company = await prisma.company.upsert({
+      where: { userId: req.userId },
+      update: {},
+      create: {
+        userId: req.userId,
+        businessName: '미입력',
+        businessNumber: '000-00-00000',
+        ceoName: '미입력',
+        verificationStatus: 'PENDING'
+      }
+    });
+
+    // 같은 타입의 기존 문서가 있으면 삭제
+    await prisma.verificationDocument.deleteMany({
+      where: {
+        companyId: company.id,
+        type
+      }
+    });
+
+    const document = await prisma.verificationDocument.create({
+      data: {
+        type,
+        fileName,
+        filePath,
+        fileSize: fileSize ? parseInt(fileSize) : null,
+        mimeType,
+        companyId: company.id
+      }
+    });
+
+    res.json({
+      success: true,
+      data: document,
+      message: 'Document uploaded successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Upload document error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to upload document',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// 인증 서류 삭제
+app.delete('/api/users/company/documents/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!prisma) {
+      return res.status(503).json({
+        success: false,
+        error: 'Database not available',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // 권한 확인
+    const document = await prisma.verificationDocument.findFirst({
+      where: {
+        id,
+        company: { userId: req.userId }
+      }
+    });
+
+    if (!document) {
+      return res.status(404).json({
+        success: false,
+        error: 'Document not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    await prisma.verificationDocument.delete({
+      where: { id }
+    });
+
+    res.json({
+      success: true,
+      message: 'Document deleted successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Delete document error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete document',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// 인증 신청
+app.post('/api/users/company/verify', authenticateToken, async (req, res) => {
+  try {
+    if (!prisma) {
+      return res.status(503).json({
+        success: false,
+        error: 'Database not available',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // 회사 정보 조회
+    const company = await prisma.company.findUnique({
+      where: { userId: req.userId },
+      include: {
+        verificationDocs: true
+      }
+    });
+
+    if (!company) {
+      return res.status(404).json({
+        success: false,
+        error: 'Company information not found. Please register company information first.',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    if (company.verificationStatus === 'APPROVED') {
+      return res.status(400).json({
+        success: false,
+        error: 'Company is already verified',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    if (company.verificationStatus === 'UNDER_REVIEW') {
+      return res.status(400).json({
+        success: false,
+        error: 'Verification is already under review',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // 필수 정보 확인
+    if (!company.businessName || !company.businessNumber || !company.ceoName) {
+      return res.status(400).json({
+        success: false,
+        error: 'Please complete business name, business number, and CEO name',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // 필수 서류 확인 (사업자등록증)
+    const hasBusinessLicense = company.verificationDocs.some(doc => doc.type === 'BUSINESS_LICENSE');
+    if (!hasBusinessLicense) {
+      return res.status(400).json({
+        success: false,
+        error: 'Business license document is required for verification',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // 인증 상태를 검토 중으로 변경
+    const updatedCompany = await prisma.company.update({
+      where: { id: company.id },
+      data: {
+        verificationStatus: 'UNDER_REVIEW'
+      },
+      include: {
+        verificationDocs: {
+          orderBy: { uploadedAt: 'desc' }
+        }
+      }
+    });
+
+    res.json({
+      success: true,
+      data: updatedCompany,
+      message: 'Verification request submitted successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Submit verification error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to submit verification request',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// 관리자: 인증 승인/거절 (향후 관리자 페이지용)
+app.put('/api/admin/companies/:companyId/verification', authenticateToken, async (req, res) => {
+  try {
+    const { companyId } = req.params;
+    const { status, rejectedReason } = req.body;
+
+    // 임시로 모든 사용자가 접근 가능 (실제로는 관리자 권한 확인 필요)
+    
+    if (!['APPROVED', 'REJECTED'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid status. Must be APPROVED or REJECTED',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    if (!prisma) {
+      return res.status(503).json({
+        success: false,
+        error: 'Database not available',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const updateData = {
+      verificationStatus: status,
+      verifiedAt: status === 'APPROVED' ? new Date() : null,
+      rejectedReason: status === 'REJECTED' ? rejectedReason : null
+    };
+
+    const company = await prisma.company.update({
+      where: { id: companyId },
+      data: updateData,
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        },
+        verificationDocs: {
+          orderBy: { uploadedAt: 'desc' }
+        }
+      }
+    });
+
+    res.json({
+      success: true,
+      data: company,
+      message: `Company verification ${status.toLowerCase()} successfully`,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Update verification status error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update verification status',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// ========================
+// 리뷰 시스템 API
+// ========================
+
+// 리뷰 작성
+app.post('/api/reviews', authenticateToken, async (req, res) => {
+  try {
+    const { jobId, revieweeId, rating, comment, reviewType } = req.body;
+
+    if (!jobId || !revieweeId || !rating || !reviewType) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields',
+        required: ['jobId', 'revieweeId', 'rating', 'reviewType'],
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    if (rating < 1 || rating > 5) {
+      return res.status(400).json({
+        success: false,
+        error: 'Rating must be between 1 and 5',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    if (!['EMPLOYER_TO_WORKER', 'WORKER_TO_EMPLOYER'].includes(reviewType)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid review type',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    if (!prisma) {
+      return res.status(503).json({
+        success: false,
+        error: 'Database not available',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // 일자리 정보 확인
+    const job = await prisma.job.findUnique({
+      where: { id: jobId },
+      include: {
+        applications: {
+          where: {
+            status: 'ACCEPTED'
+          }
+        }
+      }
+    });
+
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        error: 'Job not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // 일자리가 완료되었는지 확인 (선택적 - 현재는 체크하지 않음)
+    // if (job.status !== 'COMPLETED') {
+    //   return res.status(400).json({
+    //     success: false,
+    //     error: 'Can only review completed jobs',
+    //     timestamp: new Date().toISOString()
+    //   });
+    // }
+
+    // 권한 확인 - 고용주는 승인된 근로자만 리뷰 가능, 근로자는 고용주만 리뷰 가능
+    let isAuthorized = false;
+    
+    if (reviewType === 'EMPLOYER_TO_WORKER') {
+      // 고용주가 근로자에게 리뷰 - 고용주여야 하고, 리뷰 대상이 승인된 지원자여야 함
+      isAuthorized = job.employerId === req.userId && 
+                    job.applications.some(app => app.workerId === revieweeId);
+    } else if (reviewType === 'WORKER_TO_EMPLOYER') {
+      // 근로자가 고용주에게 리뷰 - 승인된 근로자여야 하고, 리뷰 대상이 고용주여야 함
+      isAuthorized = job.applications.some(app => app.workerId === req.userId) && 
+                    job.employerId === revieweeId;
+    }
+
+    if (!isAuthorized) {
+      return res.status(403).json({
+        success: false,
+        error: 'Not authorized to review this user for this job',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // 중복 리뷰 확인
+    const existingReview = await prisma.review.findUnique({
+      where: {
+        jobId_reviewerId_revieweeId: {
+          jobId,
+          reviewerId: req.userId,
+          revieweeId
+        }
+      }
+    });
+
+    if (existingReview) {
+      return res.status(409).json({
+        success: false,
+        error: 'You have already reviewed this user for this job',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // 리뷰 생성
+    const review = await prisma.review.create({
+      data: {
+        jobId,
+        reviewerId: req.userId,
+        revieweeId,
+        rating: parseInt(rating),
+        comment,
+        reviewType,
+        isPublic: true
+      },
+      include: {
+        reviewer: {
+          select: {
+            id: true,
+            name: true
+          }
+        },
+        reviewee: {
+          select: {
+            id: true,
+            name: true
+          }
+        },
+        job: {
+          select: {
+            id: true,
+            title: true
+          }
+        }
+      }
+    });
+
+    res.json({
+      success: true,
+      data: review,
+      message: 'Review created successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Create review error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to create review',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// 내가 받은 리뷰 조회
+app.get('/api/users/reviews/received', authenticateToken, async (req, res) => {
+  try {
+    const { page = 1, limit = 10 } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    if (!prisma) {
+      return res.status(503).json({
+        success: false,
+        error: 'Database not available',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const [reviews, total] = await Promise.all([
+      prisma.review.findMany({
+        where: {
+          revieweeId: req.userId,
+          isPublic: true
+        },
+        include: {
+          reviewer: {
+            select: {
+              id: true,
+              name: true
+            }
+          },
+          job: {
+            select: {
+              id: true,
+              title: true
+            }
+          }
+        },
+        orderBy: {
+          createdAt: 'desc'
+        },
+        skip: offset,
+        take: parseInt(limit)
+      }),
+      prisma.review.count({
+        where: {
+          revieweeId: req.userId,
+          isPublic: true
+        }
+      })
+    ]);
+
+    // 평균 평점 계산
+    const avgRating = await prisma.review.aggregate({
+      where: {
+        revieweeId: req.userId,
+        isPublic: true
+      },
+      _avg: {
+        rating: true
+      }
+    });
+
+    res.json({
+      success: true,
+      data: {
+        reviews,
+        total,
+        totalPages: Math.ceil(total / parseInt(limit)),
+        currentPage: parseInt(page),
+        averageRating: avgRating._avg.rating || 0
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Get received reviews error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get received reviews',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// 내가 작성한 리뷰 조회
+app.get('/api/users/reviews/given', authenticateToken, async (req, res) => {
+  try {
+    const { page = 1, limit = 10 } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    if (!prisma) {
+      return res.status(503).json({
+        success: false,
+        error: 'Database not available',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const [reviews, total] = await Promise.all([
+      prisma.review.findMany({
+        where: {
+          reviewerId: req.userId
+        },
+        include: {
+          reviewee: {
+            select: {
+              id: true,
+              name: true
+            }
+          },
+          job: {
+            select: {
+              id: true,
+              title: true
+            }
+          }
+        },
+        orderBy: {
+          createdAt: 'desc'
+        },
+        skip: offset,
+        take: parseInt(limit)
+      }),
+      prisma.review.count({
+        where: {
+          reviewerId: req.userId
+        }
+      })
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        reviews,
+        total,
+        totalPages: Math.ceil(total / parseInt(limit)),
+        currentPage: parseInt(page)
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Get given reviews error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get given reviews',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// 특정 사용자의 리뷰 조회 (공개)
+app.get('/api/users/:userId/reviews', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { page = 1, limit = 10 } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    if (!prisma) {
+      return res.status(503).json({
+        success: false,
+        error: 'Database not available',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // 사용자 존재 확인
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        userType: true
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const [reviews, total] = await Promise.all([
+      prisma.review.findMany({
+        where: {
+          revieweeId: userId,
+          isPublic: true
+        },
+        include: {
+          reviewer: {
+            select: {
+              id: true,
+              name: true
+            }
+          },
+          job: {
+            select: {
+              id: true,
+              title: true
+            }
+          }
+        },
+        orderBy: {
+          createdAt: 'desc'
+        },
+        skip: offset,
+        take: parseInt(limit)
+      }),
+      prisma.review.count({
+        where: {
+          revieweeId: userId,
+          isPublic: true
+        }
+      })
+    ]);
+
+    // 평균 평점 계산
+    const avgRating = await prisma.review.aggregate({
+      where: {
+        revieweeId: userId,
+        isPublic: true
+      },
+      _avg: {
+        rating: true
+      }
+    });
+
+    // 평점별 개수 계산
+    const ratingDistribution = await prisma.review.groupBy({
+      by: ['rating'],
+      where: {
+        revieweeId: userId,
+        isPublic: true
+      },
+      _count: {
+        rating: true
+      }
+    });
+
+    res.json({
+      success: true,
+      data: {
+        user,
+        reviews,
+        total,
+        totalPages: Math.ceil(total / parseInt(limit)),
+        currentPage: parseInt(page),
+        averageRating: avgRating._avg.rating || 0,
+        ratingDistribution
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Get user reviews error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get user reviews',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// 리뷰 수정
+app.put('/api/reviews/:reviewId', authenticateToken, async (req, res) => {
+  try {
+    const { reviewId } = req.params;
+    const { rating, comment } = req.body;
+
+    if (!rating) {
+      return res.status(400).json({
+        success: false,
+        error: 'Rating is required',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    if (rating < 1 || rating > 5) {
+      return res.status(400).json({
+        success: false,
+        error: 'Rating must be between 1 and 5',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    if (!prisma) {
+      return res.status(503).json({
+        success: false,
+        error: 'Database not available',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // 권한 확인
+    const review = await prisma.review.findUnique({
+      where: { id: reviewId }
+    });
+
+    if (!review) {
+      return res.status(404).json({
+        success: false,
+        error: 'Review not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    if (review.reviewerId !== req.userId) {
+      return res.status(403).json({
+        success: false,
+        error: 'You can only edit your own reviews',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const updatedReview = await prisma.review.update({
+      where: { id: reviewId },
+      data: {
+        rating: parseInt(rating),
+        comment
+      },
+      include: {
+        reviewer: {
+          select: {
+            id: true,
+            name: true
+          }
+        },
+        reviewee: {
+          select: {
+            id: true,
+            name: true
+          }
+        },
+        job: {
+          select: {
+            id: true,
+            title: true
+          }
+        }
+      }
+    });
+
+    res.json({
+      success: true,
+      data: updatedReview,
+      message: 'Review updated successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Update review error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update review',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// 리뷰 삭제
+app.delete('/api/reviews/:reviewId', authenticateToken, async (req, res) => {
+  try {
+    const { reviewId } = req.params;
+
+    if (!prisma) {
+      return res.status(503).json({
+        success: false,
+        error: 'Database not available',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // 권한 확인
+    const review = await prisma.review.findUnique({
+      where: { id: reviewId }
+    });
+
+    if (!review) {
+      return res.status(404).json({
+        success: false,
+        error: 'Review not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    if (review.reviewerId !== req.userId) {
+      return res.status(403).json({
+        success: false,
+        error: 'You can only delete your own reviews',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    await prisma.review.delete({
+      where: { id: reviewId }
+    });
+
+    res.json({
+      success: true,
+      message: 'Review deleted successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Delete review error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete review',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// 일자리별 리뷰 대상자 조회 (리뷰 작성 가능한 사용자 목록)
+app.get('/api/jobs/:jobId/reviewable-users', authenticateToken, async (req, res) => {
+  try {
+    const { jobId } = req.params;
+
+    if (!prisma) {
+      return res.status(503).json({
+        success: false,
+        error: 'Database not available',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const job = await prisma.job.findUnique({
+      where: { id: jobId },
+      include: {
+        employer: {
+          select: {
+            id: true,
+            name: true
+          }
+        },
+        applications: {
+          where: {
+            status: 'ACCEPTED'
+          },
+          include: {
+            worker: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        error: 'Job not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    let reviewableUsers = [];
+
+    // 고용주인 경우 - 승인된 근로자들을 리뷰할 수 있음
+    if (job.employerId === req.userId) {
+      reviewableUsers = job.applications.map(app => ({
+        userId: app.worker.id,
+        name: app.worker.name,
+        reviewType: 'EMPLOYER_TO_WORKER'
+      }));
+    } 
+    // 승인된 근로자인 경우 - 고용주를 리뷰할 수 있음
+    else if (job.applications.some(app => app.workerId === req.userId)) {
+      reviewableUsers = [{
+        userId: job.employer.id,
+        name: job.employer.name,
+        reviewType: 'WORKER_TO_EMPLOYER'
+      }];
+    }
+
+    // 이미 리뷰한 사용자 제외
+    const existingReviews = await prisma.review.findMany({
+      where: {
+        jobId,
+        reviewerId: req.userId
+      },
+      select: {
+        revieweeId: true
+      }
+    });
+
+    const reviewedUserIds = existingReviews.map(review => review.revieweeId);
+    reviewableUsers = reviewableUsers.filter(user => !reviewedUserIds.includes(user.userId));
+
+    res.json({
+      success: true,
+      data: {
+        job: {
+          id: job.id,
+          title: job.title
+        },
+        reviewableUsers
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Get reviewable users error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get reviewable users',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 app.use((req, res) => {
   res.status(404).json({
     success: false,
     error: 'Route not found',
     path: req.path,
     method: req.method,
-    availableRoutes: ['/', '/health', '/api', '/api/users', '/api/jobs'],
+    availableRoutes: ['/', '/health', '/api', '/api/users', '/api/jobs', '/api/users/resume'],
     timestamp: new Date().toISOString()
   });
 });

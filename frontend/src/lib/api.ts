@@ -73,6 +73,7 @@ export const jobAPI = {
     location: string;
     wage: number;
     workDate: string;
+    workHours?: string;
   }) =>
     apiRequest('/api/jobs', {
       method: 'POST',
@@ -112,11 +113,27 @@ export const userAPI = {
 
 // 지원 관리 API
 export const applicationAPI = {
+  // 일자리에 지원하기
+  applyToJob: (jobId: string, applicationData: { message?: string }) =>
+    apiRequest(`/api/jobs/${jobId}/apply`, {
+      method: 'POST',
+      body: JSON.stringify(applicationData),
+    }),
+
+  // 지원 상태 업데이트 (고용주용)
   updateStatus: (applicationId: string, status: 'PENDING' | 'ACCEPTED' | 'REJECTED') =>
     apiRequest(`/api/applications/${applicationId}/status`, {
       method: 'PUT',
       body: JSON.stringify({ status }),
     }),
+
+  // 내 지원 내역 조회 (근로자용)
+  getMyApplications: () =>
+    apiRequest('/api/users/applications'),
+
+  // 내 일자리의 지원자 목록 (고용주용)
+  getJobApplications: (jobId: string) =>
+    apiRequest(`/api/jobs/${jobId}/applications`),
 };
 
 // 카테고리 상수
@@ -131,9 +148,238 @@ export const JOB_CATEGORIES = [
   '기타'
 ] as const;
 
+// 이력서 API
+export const resumeAPI = {
+  // 내 이력서 조회
+  getResume: () =>
+    apiRequest('/api/users/resume'),
+
+  // 이력서 생성/업데이트
+  saveResume: (resumeData: {
+    title?: string;
+    summary?: string;
+    phone?: string;
+    address?: string;
+    birthDate?: string;
+  }) =>
+    apiRequest('/api/users/resume', {
+      method: 'POST',
+      body: JSON.stringify(resumeData),
+    }),
+
+  // 경력 관리
+  workExperience: {
+    add: (experienceData: {
+      company: string;
+      position: string;
+      description?: string;
+      startDate: string;
+      endDate?: string;
+      isCurrent?: boolean;
+    }) =>
+      apiRequest('/api/users/resume/work-experiences', {
+        method: 'POST',
+        body: JSON.stringify(experienceData),
+      }),
+
+    update: (id: string, experienceData: {
+      company?: string;
+      position?: string;
+      description?: string;
+      startDate?: string;
+      endDate?: string;
+      isCurrent?: boolean;
+    }) =>
+      apiRequest(`/api/users/resume/work-experiences/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(experienceData),
+      }),
+
+    delete: (id: string) =>
+      apiRequest(`/api/users/resume/work-experiences/${id}`, {
+        method: 'DELETE',
+      }),
+  },
+
+  // 학력 관리
+  education: {
+    add: (educationData: {
+      school: string;
+      major?: string;
+      degree: 'HIGH_SCHOOL' | 'ASSOCIATE' | 'BACHELOR' | 'MASTER' | 'DOCTORATE' | 'OTHER';
+      startDate: string;
+      endDate?: string;
+      isGraduated?: boolean;
+      gpa?: number;
+      maxGpa?: number;
+    }) =>
+      apiRequest('/api/users/resume/educations', {
+        method: 'POST',
+        body: JSON.stringify(educationData),
+      }),
+
+    update: (id: string, educationData: {
+      school?: string;
+      major?: string;
+      degree?: 'HIGH_SCHOOL' | 'ASSOCIATE' | 'BACHELOR' | 'MASTER' | 'DOCTORATE' | 'OTHER';
+      startDate?: string;
+      endDate?: string;
+      isGraduated?: boolean;
+      gpa?: number;
+      maxGpa?: number;
+    }) =>
+      apiRequest(`/api/users/resume/educations/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(educationData),
+      }),
+
+    delete: (id: string) =>
+      apiRequest(`/api/users/resume/educations/${id}`, {
+        method: 'DELETE',
+      }),
+  },
+
+  // 스킬 관리
+  skill: {
+    add: (skillData: {
+      name: string;
+      level: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED' | 'EXPERT';
+      category?: string;
+    }) =>
+      apiRequest('/api/users/resume/skills', {
+        method: 'POST',
+        body: JSON.stringify(skillData),
+      }),
+
+    update: (id: string, skillData: {
+      name?: string;
+      level?: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED' | 'EXPERT';
+      category?: string;
+    }) =>
+      apiRequest(`/api/users/resume/skills/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(skillData),
+      }),
+
+    delete: (id: string) =>
+      apiRequest(`/api/users/resume/skills/${id}`, {
+        method: 'DELETE',
+      }),
+  },
+};
+
+// 회사 인증 API
+export const companyAPI = {
+  // 내 회사 정보 조회
+  getCompany: () =>
+    apiRequest('/api/users/company'),
+
+  // 회사 정보 등록/업데이트
+  saveCompany: (companyData: {
+    businessName: string;
+    businessNumber: string;
+    ceoName: string;
+    businessType?: string;
+    businessAddress?: string;
+    phoneNumber?: string;
+    email?: string;
+    website?: string;
+    establishedDate?: string;
+    employeeCount?: number;
+    description?: string;
+  }) =>
+    apiRequest('/api/users/company', {
+      method: 'POST',
+      body: JSON.stringify(companyData),
+    }),
+
+  // 인증 서류 업로드 정보 저장
+  uploadDocument: (documentData: {
+    type: 'BUSINESS_LICENSE' | 'CORPORATE_SEAL' | 'BANK_ACCOUNT' | 'TAX_INVOICE' | 'COMPANY_PROFILE' | 'OTHER';
+    fileName: string;
+    filePath: string;
+    fileSize?: number;
+    mimeType?: string;
+  }) =>
+    apiRequest('/api/users/company/documents', {
+      method: 'POST',
+      body: JSON.stringify(documentData),
+    }),
+
+  // 인증 서류 삭제
+  deleteDocument: (id: string) =>
+    apiRequest(`/api/users/company/documents/${id}`, {
+      method: 'DELETE',
+    }),
+
+  // 인증 신청
+  submitVerification: () =>
+    apiRequest('/api/users/company/verify', {
+      method: 'POST',
+    }),
+
+  // 관리자: 인증 승인/거절
+  updateVerificationStatus: (companyId: string, status: 'APPROVED' | 'REJECTED', rejectedReason?: string) =>
+    apiRequest(`/api/admin/companies/${companyId}/verification`, {
+      method: 'PUT',
+      body: JSON.stringify({ status, rejectedReason }),
+    }),
+};
+
+// 리뷰 API
+export const reviewAPI = {
+  // 리뷰 작성
+  createReview: (reviewData: {
+    jobId: string;
+    revieweeId: string;
+    rating: number;
+    comment?: string;
+    reviewType: 'EMPLOYER_TO_WORKER' | 'WORKER_TO_EMPLOYER';
+  }) =>
+    apiRequest('/api/reviews', {
+      method: 'POST',
+      body: JSON.stringify(reviewData),
+    }),
+
+  // 내가 받은 리뷰 조회
+  getReceivedReviews: (page = 1, limit = 10) =>
+    apiRequest(`/api/users/reviews/received?page=${page}&limit=${limit}`),
+
+  // 내가 작성한 리뷰 조회
+  getGivenReviews: (page = 1, limit = 10) =>
+    apiRequest(`/api/users/reviews/given?page=${page}&limit=${limit}`),
+
+  // 특정 사용자의 리뷰 조회
+  getUserReviews: (userId: string, page = 1, limit = 10) =>
+    apiRequest(`/api/users/${userId}/reviews?page=${page}&limit=${limit}`),
+
+  // 리뷰 수정
+  updateReview: (reviewId: string, updateData: {
+    rating: number;
+    comment?: string;
+  }) =>
+    apiRequest(`/api/reviews/${reviewId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updateData),
+    }),
+
+  // 리뷰 삭제
+  deleteReview: (reviewId: string) =>
+    apiRequest(`/api/reviews/${reviewId}`, {
+      method: 'DELETE',
+    }),
+
+  // 일자리별 리뷰 가능한 사용자 조회
+  getReviewableUsers: (jobId: string) =>
+    apiRequest(`/api/jobs/${jobId}/reviewable-users`),
+};
+
 export default {
   auth: authAPI,
   jobs: jobAPI,
   user: userAPI,
   applications: applicationAPI,
+  resume: resumeAPI,
+  company: companyAPI,
+  review: reviewAPI,
 };
