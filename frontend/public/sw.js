@@ -1,20 +1,14 @@
 // 고급 Service Worker - 건설업 특화 캐싱 전략
 
-const CACHE_NAME = 'onetime-v1.0.2';
-const STATIC_CACHE = 'onetime-static-v1.0.2';
-const DYNAMIC_CACHE = 'onetime-dynamic-v1.0.2';
-const IMAGE_CACHE = 'onetime-images-v1.0.2';
+const CACHE_NAME = 'onetime-v1.0.3';
+const STATIC_CACHE = 'onetime-static-v1.0.3';
+const DYNAMIC_CACHE = 'onetime-dynamic-v1.0.3';
+const IMAGE_CACHE = 'onetime-images-v1.0.3';
 
-// 캐시할 정적 자산들
+// 캐시할 정적 자산들 (존재하는 파일들만)
 const STATIC_ASSETS = [
   '/',
-  '/jobs',
-  '/auth/register',
-  '/auth/welcome',
-  '/offline',
-  '/manifest.json',
-  '/_next/static/css/app/layout.css',
-  '/_next/static/css/app/globals.css',
+  '/manifest.json'
 ];
 
 // 중요한 API 엔드포인트 (오프라인에서도 필요한 것들)
@@ -44,10 +38,23 @@ self.addEventListener('install', (event) => {
   
   event.waitUntil(
     Promise.all([
-      // 정적 자산 미리 캐시
-      caches.open(STATIC_CACHE).then((cache) => {
+      // 정적 자산 미리 캐시 (오류 시 개별 처리)
+      caches.open(STATIC_CACHE).then(async (cache) => {
         console.log('[SW] Precaching static assets');
-        return cache.addAll(STATIC_ASSETS);
+        try {
+          return await cache.addAll(STATIC_ASSETS);
+        } catch (error) {
+          console.warn('[SW] Failed to cache some assets, trying individually:', error);
+          // 개별적으로 캐시 시도
+          const promises = STATIC_ASSETS.map(async (asset) => {
+            try {
+              await cache.add(asset);
+            } catch (err) {
+              console.warn(`[SW] Failed to cache ${asset}:`, err);
+            }
+          });
+          return Promise.all(promises);
+        }
       }),
       
       // 바로 활성화

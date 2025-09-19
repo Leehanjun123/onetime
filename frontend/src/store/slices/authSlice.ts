@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { authAPI } from '@/services/api/auth';
+import { authAPI } from '@/lib/api';
 
 interface User {
   id: string;
@@ -31,8 +31,8 @@ const initialState: AuthState = {
 export const login = createAsyncThunk(
   'auth/login',
   async ({ email, password }: { email: string; password: string }) => {
-    const response = await authAPI.login(email, password);
-    return response.data;
+    const response = await authAPI.login({ email, password });
+    return response;
   }
 );
 
@@ -123,14 +123,14 @@ const authSlice = createSlice({
       })
       .addCase(login.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.user = action.payload.data.user;
-        state.token = action.payload.data.token;
+        state.user = action.payload.user;
+        state.token = action.payload.token;
         state.isAuthenticated = true;
         state.error = null;
         // Save to localStorage
         if (typeof window !== 'undefined') {
-          localStorage.setItem('token', action.payload.data.token);
-          localStorage.setItem('user', JSON.stringify(action.payload.data.user));
+          localStorage.setItem('token', action.payload.token);
+          localStorage.setItem('user', JSON.stringify(action.payload.user));
         }
       })
       .addCase(login.rejected, (state, action) => {

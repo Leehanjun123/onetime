@@ -2,116 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { jobAPI, JOB_CATEGORIES } from '@/lib/api';
 
-// 전문 분야 데이터
-const specialties = [
-  { id: '1', name: '전기', code: 'ELECTRIC', icon: '⚡' },
-  { id: '2', name: '목공', code: 'CARPENTRY', icon: '🔨' },
-  { id: '3', name: '샷시', code: 'SASH', icon: '🪟' },
-  { id: '4', name: '철거', code: 'DEMOLITION', icon: '🏗️' },
-  { id: '5', name: '에어컨', code: 'AIRCON', icon: '❄️' },
-  { id: '6', name: '설비', code: 'PLUMBING', icon: '🔧' },
-  { id: '7', name: '마루', code: 'FLOOR', icon: '🪵' },
-  { id: '8', name: '타일', code: 'TILE', icon: '🟦' },
-  { id: '9', name: '장판', code: 'LINOLEUM', icon: '📐' },
-  { id: '10', name: '도배', code: 'WALLPAPER', icon: '🎨' },
-  { id: '11', name: '가구', code: 'FURNITURE', icon: '🪑' },
-  { id: '12', name: '미장', code: 'PLASTERING', icon: '🏠' }
-];
+// 실제 백엔드 카테고리 사용
+const specialties = JOB_CATEGORIES.map((category, index) => ({
+  id: (index + 1).toString(),
+  name: category,
+  code: category.toUpperCase(),
+  icon: ['👔', '⏰', '🛵', '🧹', '📦', '📦', '🎪', '📋'][index] || '📋'
+}));
 
-// 샘플 데이터
-const sampleJobs = [
-  {
-    id: '1',
-    title: '아파트 전기 배선 작업자 급구',
-    company: '한빛전기',
-    category: 'ELECTRIC',
-    location: '서울 강남구',
-    distance: 2.5,
-    wage: 180000,
-    wageType: 'DAILY',
-    workDate: '2025-09-01',
-    workTime: '08:00 - 18:00',
-    requiredWorkers: 3,
-    currentApplicants: 1,
-    isUrgent: true,
-    rating: 4.5,
-    completedJobs: 127,
-    description: '신축 아파트 전기 배선 작업입니다. 경력 3년 이상 우대'
-  },
-  {
-    id: '2',
-    title: '원룸 도배 작업 도우미',
-    company: '청솔도배',
-    category: 'WALLPAPER',
-    location: '서울 마포구',
-    distance: 4.2,
-    wage: 150000,
-    wageType: 'DAILY',
-    workDate: '2025-09-02',
-    workTime: '09:00 - 18:00',
-    requiredWorkers: 2,
-    currentApplicants: 2,
-    isUrgent: false,
-    rating: 4.8,
-    completedJobs: 89,
-    description: '원룸 5개 도배 작업입니다. 초보자도 가능'
-  },
-  {
-    id: '3',
-    title: '상가 철거 인력 모집',
-    company: '대한철거',
-    category: 'DEMOLITION',
-    location: '경기 수원시',
-    distance: 15.3,
-    wage: 200000,
-    wageType: 'DAILY',
-    workDate: '2025-08-31',
-    workTime: '07:00 - 17:00',
-    requiredWorkers: 5,
-    currentApplicants: 3,
-    isUrgent: true,
-    rating: 4.2,
-    completedJobs: 234,
-    description: '상가 인테리어 철거 작업. 안전장비 지급'
-  },
-  {
-    id: '4',
-    title: '욕실 타일 시공 전문가',
-    company: '모던타일',
-    category: 'TILE',
-    location: '서울 송파구',
-    distance: 7.8,
-    wage: 220000,
-    wageType: 'DAILY',
-    workDate: '2025-09-03',
-    workTime: '08:00 - 17:00',
-    requiredWorkers: 1,
-    currentApplicants: 0,
-    isUrgent: false,
-    rating: 4.9,
-    completedJobs: 156,
-    description: '욕실 리모델링 타일 작업. 경력자만'
-  },
-  {
-    id: '5',
-    title: '에어컨 설치 기사 찾습니다',
-    company: '쿨에어컨',
-    category: 'AIRCON',
-    location: '인천 부평구',
-    distance: 22.1,
-    wage: 160000,
-    wageType: 'DAILY',
-    workDate: '2025-09-01',
-    workTime: '09:00 - 19:00',
-    requiredWorkers: 2,
-    currentApplicants: 1,
-    isUrgent: true,
-    rating: 4.6,
-    completedJobs: 98,
-    description: '벽걸이 에어컨 3대 설치. 차량 소지자 우대'
-  }
-];
 
 export default function DailyJobsPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
@@ -119,46 +19,59 @@ export default function DailyJobsPage() {
   const [minWage, setMinWage] = useState('');
   const [sortBy, setSortBy] = useState('distance');
   const [showUrgentOnly, setShowUrgentOnly] = useState(false);
-  const [filteredJobs, setFilteredJobs] = useState(sampleJobs);
+  const [jobs, setJobs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
 
-  useEffect(() => {
-    // 필터링 로직
-    let filtered = [...sampleJobs];
-
-    if (selectedCategory) {
-      filtered = filtered.filter(job => job.category === selectedCategory);
-    }
-
-    if (searchLocation) {
-      filtered = filtered.filter(job => 
-        job.location.toLowerCase().includes(searchLocation.toLowerCase())
-      );
-    }
-
-    if (minWage) {
-      filtered = filtered.filter(job => job.wage >= parseInt(minWage));
-    }
-
-    if (showUrgentOnly) {
-      filtered = filtered.filter(job => job.isUrgent);
-    }
-
-    // 정렬
-    filtered.sort((a, b) => {
-      switch(sortBy) {
-        case 'distance':
-          return a.distance - b.distance;
-        case 'wage':
-          return b.wage - a.wage;
-        case 'rating':
-          return b.rating - a.rating;
-        default:
-          return 0;
+  const fetchJobs = async () => {
+    setLoading(true);
+    try {
+      const params: any = {};
+      
+      if (selectedCategory) {
+        params.category = selectedCategory;
       }
-    });
+      
+      if (searchLocation) {
+        params.location = searchLocation;
+      }
+      
+      const data = await jobAPI.getJobs(params);
+      if (data.success && data.data) {
+        let jobs = data.data;
+        
+        // Client-side filtering for features not supported by API
+        if (minWage) {
+          jobs = jobs.filter((job: any) => job.wage >= parseInt(minWage));
+        }
+        
+        if (showUrgentOnly) {
+          jobs = jobs.filter((job: any) => job.isUrgent);
+        }
+        
+        // Client-side sorting
+        jobs.sort((a: any, b: any) => {
+          switch(sortBy) {
+            case 'wage':
+              return b.wage - a.wage;
+            case 'rating':
+              return (b.rating || 0) - (a.rating || 0);
+            default:
+              return 0;
+          }
+        });
+        
+        setJobs(jobs);
+      }
+    } catch (error) {
+      console.error('Failed to fetch jobs:', error);
+      setJobs([]);
+    }
+    setLoading(false);
+  };
 
-    setFilteredJobs(filtered);
+  useEffect(() => {
+    fetchJobs();
   }, [selectedCategory, searchLocation, minWage, sortBy, showUrgentOnly]);
 
   const getCategoryInfo = (code: string) => {
@@ -298,7 +211,7 @@ export default function DailyJobsPage() {
           <div className="flex-1">
             <div className="mb-4 flex items-center justify-between">
               <p className="text-gray-600">
-                총 <span className="font-bold text-indigo-600">{filteredJobs.length}</span>개의 일자리
+                총 <span className="font-bold text-indigo-600">{jobs.length}</span>개의 일자리
               </p>
               <div className="flex gap-2">
                 <button className="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2">
@@ -310,8 +223,14 @@ export default function DailyJobsPage() {
               </div>
             </div>
 
-            <div className="space-y-4">
-              {filteredJobs.map(job => {
+            {loading ? (
+              <div className="bg-white rounded-lg shadow-md p-12 text-center">
+                <div className="text-6xl mb-4">⏳</div>
+                <p className="text-gray-600">일자리를 불러오는 중...</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {jobs.map(job => {
                 const category = getCategoryInfo(job.category);
                 return (
                   <div key={job.id} className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6">
@@ -347,7 +266,7 @@ export default function DailyJobsPage() {
                           </div>
                           <div className="flex items-center text-sm text-gray-600">
                             <span className="mr-2">👥</span>
-                            {job.currentApplicants}/{job.requiredWorkers}명 지원
+                            {job.applications?.length || 0}/{job.requiredWorkers || 1}명 지원
                           </div>
                         </div>
 
@@ -356,16 +275,16 @@ export default function DailyJobsPage() {
                         <div className="flex items-center gap-4">
                           <div className="flex items-center">
                             <span className="text-yellow-500 mr-1">⭐</span>
-                            <span className="font-medium">{job.rating}</span>
+                            <span className="font-medium">{job.rating || 'N/A'}</span>
                             <span className="text-gray-500 text-sm ml-1">
-                              ({job.completedJobs}건 완료)
+                              ({job.completedJobs || 0}건 완료)
                             </span>
                           </div>
                           <div className="flex gap-2">
                             <span className="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded">
                               {category?.name}
                             </span>
-                            {job.currentApplicants >= job.requiredWorkers && (
+                            {(job.applications?.length || 0) >= (job.requiredWorkers || 1) && (
                               <span className="bg-orange-100 text-orange-700 text-xs px-2 py-1 rounded">
                                 마감임박
                               </span>
@@ -379,7 +298,7 @@ export default function DailyJobsPage() {
                           {job.wage.toLocaleString()}원
                         </div>
                         <div className="text-sm text-gray-500 mb-4">
-                          {job.wageType === 'DAILY' ? '일당' : '시급'}
+                          {job.wageType === 'DAILY' ? '일당' : job.wageType === 'HOURLY' ? '시급' : '일당'}
                         </div>
                         <button className="w-full bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 font-medium">
                           지원하기
@@ -391,10 +310,11 @@ export default function DailyJobsPage() {
                     </div>
                   </div>
                 );
-              })}
-            </div>
+                })}
+              </div>
+            )}
 
-            {filteredJobs.length === 0 && (
+            {!loading && jobs.length === 0 && (
               <div className="bg-white rounded-lg shadow-md p-12 text-center">
                 <div className="text-6xl mb-4">😔</div>
                 <h3 className="text-xl font-bold text-gray-900 mb-2">

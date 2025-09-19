@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAppSelector } from '@/store/hooks';
+import { jobAPI } from '@/lib/api';
 import LocationPicker from '@/components/LocationPicker';
 
 interface LocationData {
@@ -27,309 +28,6 @@ interface NearbyJob {
   requiredWorkers: number;
 }
 
-// 샘플 일자리 데이터
-const sampleJobs: NearbyJob[] = [
-  {
-    id: '1',
-    title: '아파트 전기 배선 작업',
-    company: '한빛전기',
-    location: '서울시 강남구 역삼동',
-    latitude: 37.5006,
-    longitude: 127.0366,
-    wage: 180000,
-    wageType: 'DAILY',
-    category: '전기',
-    workDate: '2025-08-31',
-    workTime: '09:00-18:00',
-    isUrgent: true,
-    requiredWorkers: 2
-  },
-  {
-    id: '2',
-    title: '원룸 도배 작업',
-    company: '청솔도배',
-    location: '서울시 강남구 삼성동',
-    latitude: 37.5087,
-    longitude: 127.0632,
-    wage: 150000,
-    wageType: 'DAILY',
-    category: '도배',
-    workDate: '2025-09-01',
-    workTime: '08:00-17:00',
-    isUrgent: false,
-    requiredWorkers: 1
-  },
-  {
-    id: '3',
-    title: '상가 철거 작업',
-    company: '대한철거',
-    location: '서울시 서초구 서초동',
-    latitude: 37.4938,
-    longitude: 127.0323,
-    wage: 25000,
-    wageType: 'HOURLY',
-    category: '철거',
-    workDate: '2025-08-31',
-    workTime: '07:00-19:00',
-    isUrgent: true,
-    requiredWorkers: 5
-  },
-  {
-    id: '4',
-    title: '마루 시공 작업',
-    company: '우드플로어',
-    location: '서울시 강남구 개포동',
-    latitude: 37.4828,
-    longitude: 127.0631,
-    wage: 200000,
-    wageType: 'DAILY',
-    category: '마루',
-    workDate: '2025-09-02',
-    workTime: '09:00-18:00',
-    isUrgent: false,
-    requiredWorkers: 2
-  },
-  {
-    id: '5',
-    title: '사무실 목공 인테리어',
-    company: '프리미엄우드',
-    location: '서울시 강남구 논현동',
-    latitude: 37.5106,
-    longitude: 127.0282,
-    wage: 22000,
-    wageType: 'HOURLY',
-    category: '목공',
-    workDate: '2025-09-01',
-    workTime: '08:30-17:30',
-    isUrgent: false,
-    requiredWorkers: 3
-  },
-  {
-    id: '6',
-    title: '빌딩 샷시 교체 작업',
-    company: '세진샷시',
-    location: '서울시 서초구 방배동',
-    latitude: 37.4818,
-    longitude: 127.0113,
-    wage: 190000,
-    wageType: 'DAILY',
-    category: '샷시',
-    workDate: '2025-08-31',
-    workTime: '08:00-18:00',
-    isUrgent: true,
-    requiredWorkers: 4
-  },
-  {
-    id: '7',
-    title: '카페 에어컨 설치',
-    company: '시원한에어컨',
-    location: '서울시 강남구 신사동',
-    latitude: 37.5205,
-    longitude: 127.0194,
-    wage: 170000,
-    wageType: 'DAILY',
-    category: '에어컨',
-    workDate: '2025-09-02',
-    workTime: '09:00-17:00',
-    isUrgent: false,
-    requiredWorkers: 2
-  },
-  {
-    id: '8',
-    title: '아파트 배관 설비 작업',
-    company: '현대설비',
-    location: '서울시 서초구 반포동',
-    latitude: 37.5058,
-    longitude: 127.0125,
-    wage: 28000,
-    wageType: 'HOURLY',
-    category: '설비',
-    workDate: '2025-09-01',
-    workTime: '07:30-18:30',
-    isUrgent: true,
-    requiredWorkers: 3
-  },
-  {
-    id: '9',
-    title: '상가 타일 시공',
-    company: '미래타일',
-    location: '서울시 강남구 청담동',
-    latitude: 37.5273,
-    longitude: 127.0486,
-    wage: 160000,
-    wageType: 'DAILY',
-    category: '타일',
-    workDate: '2025-09-03',
-    workTime: '08:00-17:00',
-    isUrgent: false,
-    requiredWorkers: 2
-  },
-  {
-    id: '10',
-    title: '원룸 장판 교체',
-    company: '깔끔장판',
-    location: '서울시 서초구 서초동',
-    latitude: 37.4923,
-    longitude: 127.0298,
-    wage: 120000,
-    wageType: 'DAILY',
-    category: '장판',
-    workDate: '2025-09-01',
-    workTime: '10:00-16:00',
-    isUrgent: false,
-    requiredWorkers: 1
-  },
-  {
-    id: '11',
-    title: '오피스텔 가구 조립',
-    company: '조립의달인',
-    location: '서울시 강남구 대치동',
-    latitude: 37.4951,
-    longitude: 127.0628,
-    wage: 18000,
-    wageType: 'HOURLY',
-    category: '가구',
-    workDate: '2025-08-31',
-    workTime: '13:00-18:00',
-    isUrgent: true,
-    requiredWorkers: 2
-  },
-  {
-    id: '12',
-    title: '주택 미장 보수 작업',
-    company: '완벽미장',
-    location: '서울시 서초구 잠원동',
-    latitude: 37.5158,
-    longitude: 127.0113,
-    wage: 24000,
-    wageType: 'HOURLY',
-    category: '미장',
-    workDate: '2025-09-02',
-    workTime: '08:00-17:00',
-    isUrgent: false,
-    requiredWorkers: 2
-  },
-  {
-    id: '13',
-    title: '펜션 전기 점검',
-    company: '안전전기',
-    location: '서울시 강남구 압구정동',
-    latitude: 37.5272,
-    longitude: 127.0286,
-    wage: 140000,
-    wageType: 'DAILY',
-    category: '전기',
-    workDate: '2025-09-03',
-    workTime: '09:30-16:30',
-    isUrgent: false,
-    requiredWorkers: 1
-  },
-  {
-    id: '14',
-    title: '학원 도배 리모델링',
-    company: '프로도배',
-    location: '서울시 서초구 교대동',
-    latitude: 37.4942,
-    longitude: 127.0135,
-    wage: 165000,
-    wageType: 'DAILY',
-    category: '도배',
-    workDate: '2025-09-01',
-    workTime: '08:30-18:30',
-    isUrgent: true,
-    requiredWorkers: 3
-  },
-  {
-    id: '15',
-    title: '창고 철거 및 정리',
-    company: '깔끔철거',
-    location: '서울시 강남구 수서동',
-    latitude: 37.4839,
-    longitude: 127.1006,
-    wage: 23000,
-    wageType: 'HOURLY',
-    category: '철거',
-    workDate: '2025-09-02',
-    workTime: '07:00-18:00',
-    isUrgent: true,
-    requiredWorkers: 6
-  },
-  {
-    id: '16',
-    title: '카페 마루 재시공',
-    company: '프리미엄마루',
-    location: '서울시 강남구 도곡동',
-    latitude: 37.4876,
-    longitude: 127.0516,
-    wage: 210000,
-    wageType: 'DAILY',
-    category: '마루',
-    workDate: '2025-09-04',
-    workTime: '08:00-18:00',
-    isUrgent: false,
-    requiredWorkers: 3
-  },
-  {
-    id: '17',
-    title: '사무실 목공 파티션',
-    company: '스마트목공',
-    location: '서울시 서초구 양재동',
-    latitude: 37.4672,
-    longitude: 127.0348,
-    wage: 26000,
-    wageType: 'HOURLY',
-    category: '목공',
-    workDate: '2025-09-03',
-    workTime: '09:00-18:00',
-    isUrgent: false,
-    requiredWorkers: 2
-  },
-  {
-    id: '18',
-    title: '아파트 샷시 보수',
-    company: '믿음샷시',
-    location: '서울시 강남구 일원동',
-    latitude: 37.4833,
-    longitude: 127.0831,
-    wage: 175000,
-    wageType: 'DAILY',
-    category: '샷시',
-    workDate: '2025-09-01',
-    workTime: '08:30-17:30',
-    isUrgent: true,
-    requiredWorkers: 2
-  },
-  {
-    id: '19',
-    title: '병원 에어컨 청소',
-    company: '깨끗한에어컨',
-    location: '서울시 서초구 내곡동',
-    latitude: 37.4648,
-    longitude: 127.0918,
-    wage: 130000,
-    wageType: 'DAILY',
-    category: '에어컨',
-    workDate: '2025-09-02',
-    workTime: '10:00-16:00',
-    isUrgent: false,
-    requiredWorkers: 1
-  },
-  {
-    id: '20',
-    title: '주택 배관 교체',
-    company: '전문설비',
-    location: '서울시 강남구 세곡동',
-    latitude: 37.4692,
-    longitude: 127.1061,
-    wage: 30000,
-    wageType: 'HOURLY',
-    category: '설비',
-    workDate: '2025-09-03',
-    workTime: '08:00-17:00',
-    isUrgent: true,
-    requiredWorkers: 4
-  }
-];
 
 export default function NearbyJobsPage() {
   const { isAuthenticated } = useAppSelector((state) => state.auth);
@@ -366,60 +64,36 @@ export default function NearbyJobsPage() {
     
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      if (!token) return;
-
-      const response = await fetch(
-        `http://localhost:5000/api/v1/jobs/nearby?latitude=${currentLocation.latitude}&longitude=${currentLocation.longitude}&radius=${searchRadius}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        }
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setNearbyJobs(data.data.jobs);
-        }
-      } else {
-        // API 실패 시 샘플 데이터 사용
-        const jobsWithDistance = sampleJobs.map(job => ({
+      const params: any = {
+        latitude: currentLocation.latitude,
+        longitude: currentLocation.longitude,
+        radius: searchRadius
+      };
+      
+      const data = await jobAPI.getJobs(params);
+      if (data.success && data.data) {
+        // Calculate distance for each job and filter by radius
+        const jobsWithDistance = data.data.map((job: any) => ({
           ...job,
-          distance: calculateDistance(
+          distance: job.latitude && job.longitude ? calculateDistance(
             currentLocation.latitude,
             currentLocation.longitude,
             job.latitude,
             job.longitude
-          )
+          ) : null
         }));
 
         const filteredJobs = jobsWithDistance
-          .filter(job => job.distance! <= searchRadius)
-          .sort((a, b) => a.distance! - b.distance!);
+          .filter((job: any) => job.distance && job.distance <= searchRadius)
+          .sort((a: any, b: any) => (a.distance || 0) - (b.distance || 0));
 
         setNearbyJobs(filteredJobs);
+      } else {
+        setNearbyJobs([]);
       }
     } catch (error) {
       console.error('근처 일자리 조회 실패:', error);
-      
-      // 에러 시 샘플 데이터 사용
-      const jobsWithDistance = sampleJobs.map(job => ({
-        ...job,
-        distance: calculateDistance(
-          currentLocation.latitude,
-          currentLocation.longitude,
-          job.latitude,
-          job.longitude
-        )
-      }));
-
-      const filteredJobs = jobsWithDistance
-        .filter(job => job.distance! <= searchRadius)
-        .sort((a, b) => a.distance! - b.distance!);
-
-      setNearbyJobs(filteredJobs);
+      setNearbyJobs([]);
     } finally {
       setLoading(false);
     }
@@ -464,32 +138,8 @@ export default function NearbyJobsPage() {
 
   const handleApplyJob = async (job: NearbyJob) => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        alert('로그인이 필요합니다.');
-        return;
-      }
-
-      // 채팅방 생성 API 호출
-      const response = await fetch('http://localhost:5000/api/v1/chat/rooms', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          otherUserId: 'employer_' + job.id, // 임시 고용주 ID
-          jobId: job.id,
-          jobTitle: job.title
-        })
-      });
-
-      if (response.ok) {
-        alert('지원이 완료되었습니다! 고용주와 채팅을 시작할 수 있습니다.');
-        // 채팅 목록을 새로고침하거나 채팅 창을 바로 열 수 있음
-      } else {
-        alert('지원 중 오류가 발생했습니다.');
-      }
+      await jobAPI.applyToJob(job.id, { message: '지원합니다.' });
+      alert('지원이 완료되었습니다!');
     } catch (error) {
       console.error('지원 오류:', error);
       alert('지원 중 오류가 발생했습니다.');
